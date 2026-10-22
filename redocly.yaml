@@ -1,0 +1,6 @@
+extends:
+  - recommended
+
+rules:
+  # The license belongs to Inoreader's API, which states none.
+  info-license: off

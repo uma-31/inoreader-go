@@ -1,0 +1,1196 @@
+openapi: 3.1.0
+info:
+  title: Inoreader API
+  version: "0"
+  summary: Inoreader's Google Reader compatible API
+  description: |
+    Written by hand from the Inoreader developer portal, which publishes no
+    machine-readable specification. It serves as the contract for the client
+    and as the source of the mock server used in E2E tests.
+
+    Every response from the API carries the rate limit headers; the spec
+    declares them on the documented success responses only.
+  x-source: https://www.inoreader.com/developers/
+  x-checked-on: "2026-10-22"
+externalDocs:
+  url: https://www.inoreader.com/developers/
+servers:
+  - url: https://www.inoreader.com
+security:
+  - oauth2: [read]
+    appIdHeader: []
+    appKeyHeader: []
+  - oauth2: [read]
+    appIdQuery: []
+    appKeyQuery: []
+  - clientLogin: []
+    appIdHeader: []
+    appKeyHeader: []
+  - clientLogin: []
+    appIdQuery: []
+    appKeyQuery: []
+tags:
+  - name: auth
+    description: Sign-in with OAuth 2.0 or the legacy ClientLogin.
+  - name: user
+    description: The signed-in user.
+  - name: subscriptions
+    description: Followed feeds.
+  - name: tags
+    description: Folders and tags, and tagging articles.
+  - name: streams
+    description: Articles and unread counts of feeds, folders and tags.
+  - name: preferences
+    description: Per-stream preferences such as ordering.
+  - name: active-search
+    description: Saved searches that keep collecting matching articles.
+
+# Shared by every response that carries the rate limit headers.
+x-rate-limit-headers: &rateLimitHeaders
+  X-Reader-Zone1-Limit: { $ref: "#/components/headers/X-Reader-Zone1-Limit" }
+  X-Reader-Zone2-Limit: { $ref: "#/components/headers/X-Reader-Zone2-Limit" }
+  X-Reader-Zone1-Usage: { $ref: "#/components/headers/X-Reader-Zone1-Usage" }
+  X-Reader-Zone2-Usage: { $ref: "#/components/headers/X-Reader-Zone2-Usage" }
+  X-Reader-Limits-Reset-After: { $ref: "#/components/headers/X-Reader-Limits-Reset-After" }
+
+paths:
+  /oauth2/auth:
+    get:
+      tags: [auth]
+      operationId: authorize
+      summary: Redirect the user to the consent page
+      externalDocs:
+        url: https://www.inoreader.com/developers/oauth
+      security: []
+      parameters:
+        - { name: client_id, in: query, required: true, schema: { type: string } }
+        - { name: redirect_uri, in: query, required: true, schema: { type: string, format: uri } }
+        - name: response_type
+          in: query
+          required: true
+          schema: { type: string, const: code }
+        - name: scope
+          in: query
+          description: "`read` or `read write`; empty for the scope set in the app registration."
+          schema: { type: string, examples: ["read write"] }
+        - name: state
+          in: query
+          required: true
+          description: Up to 500 bytes passed back to the redirect URI, for CSRF protection.
+          schema: { type: string, maxLength: 500 }
+      responses:
+        "200":
+          description: >-
+            The consent page. Once the user authorizes the app, the browser is
+            redirected to `redirect_uri` with `code` and `state`.
+          content:
+            text/html:
+              schema: { type: string }
+              example: <html><body>Authorize the app</body></html>
+        "302":
+          description: >-
+            Redirect, either to sign-in when the user is signed out or to
+            `redirect_uri` with `code` and `state`.
+          headers:
+            Location:
+              schema: { type: string, format: uri }
+              example: https://example.com/callback?code=mock-authorization-code&state=mock-state
+
+  /oauth2/token:
+    post:
+      tags: [auth]
+      operationId: token
+      summary: Exchange an authorization code or a refresh token for tokens
+      externalDocs:
+        url: https://www.inoreader.com/developers/oauth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/AuthorizationCodeGrant"
+                - $ref: "#/components/schemas/RefreshTokenGrant"
+      responses:
+        "200":
+          description: Issued tokens.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Token" }
+              example:
+                access_token: mock-access-token
+                token_type: Bearer
+                expires_in: 86400
+                refresh_token: mock-refresh-token
+                scope: read write
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /accounts/ClientLogin:
+    post:
+      tags: [auth]
+      operationId: clientLogin
+      summary: Sign in with email and password (legacy)
+      description: Kept for compatibility with Google Reader clients. Prefer OAuth 2.0.
+      externalDocs:
+        url: https://www.inoreader.com/developers/auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [Email, Passwd]
+              properties:
+                Email: { type: string, description: Username or email. }
+                Passwd: { type: string, format: password }
+      responses:
+        "200":
+          description: "The token goes in `Authorization: GoogleLogin auth=<Auth>`."
+          content:
+            text/plain:
+              schema: { type: string }
+              example: "SID=null\nLSID=null\nAuth=mock-client-login-token\n"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+
+  /reader/api/0/user-info:
+    get:
+      tags: [user]
+      operationId: getUserInfo
+      summary: Get the signed-in user
+      externalDocs:
+        url: https://www.inoreader.com/developers/user-info
+      x-zone: 1
+      responses:
+        "200":
+          description: The user.
+          headers: *rateLimitHeaders
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserInfo" }
+              example:
+                userId: "1005921515"
+                userName: mock-user
+                userProfileId: "1005921515"
+                userEmail: user@example.com
+                isBloggerUser: false
+                signupTimeSec: 1163850013
+                isMultiLoginEnabled: false
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/subscription/quickadd:
+    post:
+      tags: [subscriptions]
+      operationId: addSubscription
+      summary: Follow a feed
+      externalDocs:
+        url: https://www.inoreader.com/developers/add-subscription
+      x-zone: 2
+      security: &writeSecurity
+        - oauth2: [write]
+          appIdHeader: []
+          appKeyHeader: []
+        - oauth2: [write]
+          appIdQuery: []
+          appKeyQuery: []
+        - clientLogin: []
+          appIdHeader: []
+          appKeyHeader: []
+        - clientLogin: []
+          appIdQuery: []
+          appKeyQuery: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [quickadd]
+              properties:
+                quickadd:
+                  type: string
+                  description: Feed ID to follow.
+                  examples: ["feed/http://feeds.arstechnica.com/arstechnica/science"]
+      responses:
+        "200":
+          description: "`numResults` is `0` when the feed was not added and `1` when it was, even if already followed."
+          headers: *rateLimitHeaders
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuickAddResult" }
+              example:
+                query: feed/http://feeds.arstechnica.com/arstechnica/science
+                numResults: 1
+                streamId: feed/http://feeds.arstechnica.com/arstechnica/science
+                streamName: Ars Technica » Scientific Method
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/subscription/edit:
+    post:
+      tags: [subscriptions]
+      operationId: editSubscription
+      summary: Rename, move, follow or unfollow a feed
+      externalDocs:
+        url: https://www.inoreader.com/developers/edit-subscription
+      x-zone: 2
+      security: *writeSecurity
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [ac, s]
+              properties:
+                ac:
+                  type: string
+                  enum: [edit, subscribe, unsubscribe]
+                s: { $ref: "#/components/schemas/StreamId" }
+                t: { type: string, description: New title; omit to keep it. }
+                a: { $ref: "#/components/schemas/StreamId", description: Folder to add the feed to. }
+                r: { $ref: "#/components/schemas/StreamId", description: Folder to remove the feed from. }
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/subscription/list:
+    get:
+      tags: [subscriptions]
+      operationId: listSubscriptions
+      summary: List followed feeds
+      description: The feeds come unsorted; order them by `sortid` and the stream preferences.
+      externalDocs:
+        url: https://www.inoreader.com/developers/subscription-list
+      x-zone: 1
+      parameters:
+        - $ref: "#/components/parameters/teamAssets"
+      responses:
+        "200":
+          description: The feeds.
+          headers: *rateLimitHeaders
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subscriptions]
+                properties:
+                  subscriptions:
+                    type: array
+                    items: { $ref: "#/components/schemas/Subscription" }
+              example:
+                subscriptions:
+                  - id: feed/http://feeds.arstechnica.com/arstechnica/science
+                    title: Ars Technica » Scientific Method
+                    categories:
+                      - id: user/1005921515/label/Tech
+                        label: Tech
+                    sortid: 00DA6134
+                    firstitemmsec: 1424501776942006
+                    url: http://feeds.arstechnica.com/arstechnica/science
+                    htmlUrl: https://arstechnica.com/
+                    iconUrl: ""
+                    feedType: rss
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/unread-count:
+    get:
+      tags: [streams]
+      operationId: getUnreadCounts
+      summary: Get unread counts of feeds, folders and tags
+      externalDocs:
+        url: https://www.inoreader.com/developers/unread-counts
+      x-zone: 1
+      responses:
+        "200":
+          description: "When `count` equals `max`, display it as `max+`."
+          headers: *rateLimitHeaders
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UnreadCounts" }
+              example:
+                max: 1000
+                unreadcounts:
+                  - id: user/1005921515/state/com.google/reading-list
+                    count: 4
+                    newestItemTimestampUsec: "1415620910006331"
+                  - id: user/1005921515/label/Tech
+                    count: 4
+                    newestItemTimestampUsec: "1415620910006331"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/tag/list:
+    get:
+      tags: [tags]
+      operationId: listTags
+      summary: List folders and tags
+      externalDocs:
+        url: https://www.inoreader.com/developers/tag-list
+      x-zone: 1
+      parameters:
+        - name: types
+          in: query
+          description: "`1` to include `type`."
+          schema: { type: integer, enum: [0, 1] }
+        - name: counts
+          in: query
+          description: "`1`, together with `types=1`, to include unread and unseen counts."
+          schema: { type: integer, enum: [0, 1] }
+        - $ref: "#/components/parameters/teamAssets"
+      responses:
+        "200":
+          description: The folders and tags.
+          headers: *rateLimitHeaders
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tags]
+                properties:
+                  tags:
+                    type: array
+                    items: { $ref: "#/components/schemas/Tag" }
+              example:
+                tags:
+                  - id: user/1005921515/state/com.google/starred
+                    sortid: FFFFFFFF
+                  - id: user/1005921515/label/Tech
+                    sortid: BECC0BE1
+                    type: folder
+                    unread_count: 4
+                    unseen_count: 0
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/rename-tag:
+    post:
+      tags: [tags]
+      operationId: renameTag
+      summary: Rename a folder or tag
+      externalDocs:
+        url: https://www.inoreader.com/developers/rename-tag
+      x-zone: 2
+      security: *writeSecurity
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [s, dest]
+              properties:
+                s: { $ref: "#/components/schemas/StreamId" }
+                dest: { type: string, description: New name. }
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/disable-tag:
+    post:
+      tags: [tags]
+      operationId: deleteTag
+      summary: Delete a folder or tag
+      externalDocs:
+        url: https://www.inoreader.com/developers/delete-tag
+      x-zone: 2
+      security: *writeSecurity
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [s]
+              properties:
+                s: { $ref: "#/components/schemas/StreamId" }
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/edit-tag:
+    post:
+      tags: [tags]
+      operationId: editTag
+      summary: Add or remove tags on articles
+      description: |
+        Also changes system states such as read and starred. Marking an article
+        older than its feed's `firstitemmsec` as unread is silently ignored.
+      externalDocs:
+        url: https://www.inoreader.com/developers/edit-tag
+      x-zone: 2
+      security: *writeSecurity
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [i]
+              properties:
+                a: { $ref: "#/components/schemas/StreamId", description: Tag to add. }
+                r: { $ref: "#/components/schemas/StreamId", description: Tag to remove. }
+                i:
+                  type: array
+                  minItems: 1
+                  items: { $ref: "#/components/schemas/ItemId" }
+            encoding:
+              i: { style: form, explode: true }
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/mark-all-as-read:
+    post:
+      tags: [streams]
+      operationId: markAllAsRead
+      summary: Mark every article in a stream as read
+      externalDocs:
+        url: https://www.inoreader.com/developers/mark-all-as-read
+      x-zone: 2
+      security: *writeSecurity
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [s, ts]
+              properties:
+                s: { $ref: "#/components/schemas/StreamId" }
+                ts:
+                  type: integer
+                  description: >-
+                    When the stream was last fetched and shown, in seconds or
+                    microseconds, so that articles the user never saw stay unread.
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/stream/contents/{streamId}:
+    get:
+      tags: [streams]
+      operationId: getStreamContents
+      summary: Get the articles of a stream
+      externalDocs:
+        url: https://www.inoreader.com/developers/stream-contents
+      x-zone: 1
+      parameters:
+        - name: streamId
+          in: path
+          required: true
+          description: URL-encoded, slashes included.
+          schema: { $ref: "#/components/schemas/StreamId" }
+        - name: n
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - $ref: "#/components/parameters/order"
+        - $ref: "#/components/parameters/olderThan"
+        - $ref: "#/components/parameters/excludeTarget"
+        - $ref: "#/components/parameters/includeTarget"
+        - $ref: "#/components/parameters/continuation"
+        - $ref: "#/components/parameters/output"
+        - $ref: "#/components/parameters/includeAllDirectStreamIds"
+        - name: annotations
+          in: query
+          description: "`1` to include the user's annotations."
+          schema: { type: integer, enum: [0, 1] }
+        - name: summaries
+          in: query
+          description: "`1` to include Inoreader Intelligence summaries."
+          schema: { type: integer, enum: [0, 1] }
+      responses:
+        "200":
+          description: A page of articles. No `continuation` means the end of the stream.
+          headers: *rateLimitHeaders
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StreamContents" }
+              example:
+                direction: ltr
+                id: user/-/label/Tech
+                title: Tech
+                description: ""
+                self:
+                  href: https://www.inoreader.com/reader/api/0/stream/contents/user%2F-%2Flabel%2FTech
+                updated: 1618212570
+                updatedUsec: "1618212570146918"
+                items:
+                  - crawlTimeMsec: "1618211779000"
+                    timestampUsec: "1618211779000000"
+                    id: tag:google.com,2005:reader/item/0000000693c3bc0c
+                    categories:
+                      - user/1005921515/state/com.google/reading-list
+                      - user/1005921515/label/Tech
+                    title: Mock article
+                    published: 1617969599
+                    updated: 1617990787
+                    canonical:
+                      - href: https://example.com/articles/1
+                    alternate:
+                      - href: https://example.com/articles/1
+                        type: text/html
+                    summary:
+                      direction: ltr
+                      content: <p>Mock article content.</p>
+                    author: Mock Author
+                    likingUsers: []
+                    comments: []
+                    commentsNum: -1
+                    annotations: []
+                    origin:
+                      streamId: feed/http://feeds.arstechnica.com/arstechnica/science
+                      title: Ars Technica » Scientific Method
+                      htmlUrl: https://arstechnica.com/
+                continuation: gmMZgKmmqI4U
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/stream/items/ids:
+    get:
+      tags: [streams]
+      operationId: getItemIds
+      summary: Get only the article IDs of a stream
+      description: Much lighter than stream contents; use it to sync states such as read.
+      externalDocs:
+        url: https://www.inoreader.com/developers/item-ids
+      x-zone: 1
+      parameters:
+        - name: s
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/StreamId" }
+        - name: n
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 20 }
+        - $ref: "#/components/parameters/order"
+        - $ref: "#/components/parameters/olderThan"
+        - $ref: "#/components/parameters/excludeTarget"
+        - $ref: "#/components/parameters/includeTarget"
+        - $ref: "#/components/parameters/continuation"
+        - $ref: "#/components/parameters/output"
+        - $ref: "#/components/parameters/includeAllDirectStreamIds"
+      responses:
+        "200":
+          description: A page of article references.
+          headers: *rateLimitHeaders
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ItemIds" }
+              example:
+                items: []
+                itemRefs:
+                  - id: "3614359203"
+                    directStreamIds: [user/1005921515/label/Tech]
+                    timestampUsec: "1416313130505268"
+                  - id: "3614347074"
+                    directStreamIds: [user/1005921515/label/Tech]
+                    timestampUsec: "1416313031906359"
+                continuation: aDRTXr1ek6qT
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/preference/stream/list:
+    get:
+      tags: [preferences]
+      operationId: listStreamPreferences
+      summary: List stream preferences, including feed and folder ordering
+      externalDocs:
+        url: https://www.inoreader.com/developers/preference-list
+      x-zone: 1
+      responses:
+        "200":
+          description: Preferences by stream ID.
+          headers: *rateLimitHeaders
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StreamPreferences" }
+              example:
+                streamprefs:
+                  user/1005921515/state/com.google/root:
+                    - id: subscription-ordering
+                      value: BECC0BE1
+                  user/1005921515/label/Tech:
+                    - id: is-expanded
+                      value: "true"
+                    - id: subscription-ordering
+                      value: 00DA6134
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/preference/stream/set:
+    post:
+      tags: [preferences]
+      operationId: setStreamPreference
+      summary: Set a stream preference
+      externalDocs:
+        url: https://www.inoreader.com/developers/preference-set
+      x-zone: 2
+      security: *writeSecurity
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [s, k, v]
+              properties:
+                s: { $ref: "#/components/schemas/StreamId" }
+                k: { type: string, const: subscription-ordering }
+                v:
+                  type: string
+                  pattern: "^([0-9A-Fa-f]{8})*$"
+                  description: Sort IDs concatenated in the desired order.
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/active_search/create:
+    post:
+      tags: [active-search]
+      operationId: createActiveSearch
+      summary: Create an active search
+      description: Not linked from the portal index. Pro accounts can have up to 30 active searches.
+      externalDocs:
+        url: https://www.inoreader.com/developers/active-search-create
+      x-zone: 2
+      security: *writeSecurity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ActiveSearchRequest" }
+            example:
+              term: amazing
+              filter_type: subscription
+              filter_id: feed/http://feeds.arstechnica.com/arstechnica/science
+              search_filters: all
+              search_match: all_words
+      responses:
+        "200":
+          description: The created active search.
+          headers: *rateLimitHeaders
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, title]
+                properties:
+                  id: { $ref: "#/components/schemas/StreamId" }
+                  title: { type: string }
+              example:
+                id: feed\keyword-monitoring-AbCdEf
+                title: amazing
+        "202":
+          description: Validation failed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ActiveSearchError" }
+              example:
+                error: Maximum number of active searches reached
+                accountLimit: 30
+                needUpgrade: "1"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /reader/api/0/active_search/delete:
+    get:
+      tags: [active-search]
+      operationId: deleteActiveSearch
+      summary: Delete an active search
+      description: Not linked from the portal index. Documented as GET although it changes data.
+      externalDocs:
+        url: https://www.inoreader.com/developers/active-search-delete
+      x-zone: 2
+      security: *writeSecurity
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/StreamId" }
+      responses:
+        "200":
+          description: Deleted.
+          headers: *rateLimitHeaders
+          content:
+            text/plain:
+              schema: { type: string, const: ok }
+              example: ok
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: "Zone 2 methods need the `write` scope."
+      flows:
+        authorizationCode:
+          authorizationUrl: https://www.inoreader.com/oauth2/auth
+          tokenUrl: https://www.inoreader.com/oauth2/token
+          refreshUrl: https://www.inoreader.com/oauth2/token
+          scopes:
+            read: Read the user's data
+            write: Change the user's data
+    clientLogin:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: "`GoogleLogin auth=<token>` from ClientLogin."
+    appIdHeader:
+      type: apiKey
+      in: header
+      name: AppId
+    appKeyHeader:
+      type: apiKey
+      in: header
+      name: AppKey
+    appIdQuery:
+      type: apiKey
+      in: query
+      name: AppId
+      description: For clients that cannot set headers.
+    appKeyQuery:
+      type: apiKey
+      in: query
+      name: AppKey
+      description: For clients that cannot set headers.
+
+  headers:
+    X-Reader-Zone1-Limit:
+      description: Daily limit of zone 1 requests.
+      schema: { type: integer }
+      example: 100
+    X-Reader-Zone2-Limit:
+      description: Daily limit of zone 2 requests.
+      schema: { type: integer }
+      example: 100
+    X-Reader-Zone1-Usage:
+      description: Zone 1 requests made today.
+      schema: { type: integer }
+      example: 1
+    X-Reader-Zone2-Usage:
+      description: Zone 2 requests made today.
+      schema: { type: integer }
+      example: 0
+    X-Reader-Limits-Reset-After:
+      description: Seconds until the usage resets.
+      schema: { type: integer }
+      example: 3600
+
+  parameters:
+    teamAssets:
+      name: team_assets
+      in: query
+      description: "`1` to include team assets."
+      schema: { type: integer, enum: [0, 1] }
+    order:
+      name: r
+      in: query
+      description: "`o` for oldest first; newest first when omitted."
+      schema: { type: string, const: o }
+    olderThan:
+      name: ot
+      in: query
+      description: >-
+        Only articles newer than this, in seconds or microseconds. With `r=o`
+        it is clamped to about one month ago.
+      schema: { type: integer }
+    excludeTarget:
+      name: xt
+      in: query
+      description: "Stream to exclude, e.g. `user/-/state/com.google/read` for unread only."
+      schema: { $ref: "#/components/schemas/StreamId" }
+    includeTarget:
+      name: it
+      in: query
+      schema:
+        type: string
+        enum: [user/-/state/com.google/starred, user/-/state/com.google/like]
+    continuation:
+      name: c
+      in: query
+      description: "`continuation` from the previous page."
+      schema: { type: string }
+    output:
+      name: output
+      in: query
+      schema: { type: string, const: json }
+    includeAllDirectStreamIds:
+      name: includeAllDirectStreamIds
+      in: query
+      description: "`false` to leave out the tags inherited from folders."
+      schema: { type: boolean }
+
+  responses:
+    OK:
+      description: Done.
+      headers: *rateLimitHeaders
+      content:
+        text/plain:
+          schema: { type: string, const: OK }
+          example: OK
+    BadRequest:
+      description: Mandatory parameters are missing.
+      content:
+        text/plain:
+          schema: { $ref: "#/components/schemas/ErrorMessage" }
+          example: Error=Mandatory parameter missing
+    Unauthorized:
+      description: The user is not authorized; sign them in again.
+      content:
+        text/plain:
+          schema: { $ref: "#/components/schemas/ErrorMessage" }
+          example: Error=Unauthorized
+    Forbidden:
+      description: Wrong AppId or AppKey, or the method is not implemented.
+      content:
+        text/plain:
+          schema: { $ref: "#/components/schemas/ErrorMessage" }
+          example: Error=Forbidden
+    TooManyRequests:
+      description: The daily limit of the zone is reached.
+      headers: *rateLimitHeaders
+      content:
+        text/plain:
+          schema: { $ref: "#/components/schemas/ErrorMessage" }
+          example: Error=Daily request limit reached
+    ServiceUnavailable:
+      description: The service is unavailable.
+
+  schemas:
+    StreamId:
+      type: string
+      description: >-
+        A feed (`feed/<url>`), a folder or tag (`user/-/label/<name>`) or a
+        system stream (`user/-/state/com.google/<state>`). `-` stands for the
+        current user.
+      examples: [user/-/label/Tech]
+    ItemId:
+      type: string
+      description: >-
+        Long form (`tag:google.com,2005:reader/item/` and 16 hex digits) or
+        short form (signed decimal) of the same 64-bit ID.
+      examples: ["344691561", "tag:google.com,2005:reader/item/00000000148b9369"]
+    SortId:
+      type: string
+      pattern: "^[0-9A-Fa-f]{8}$"
+    TimestampUsec:
+      type: string
+      pattern: "^[0-9]+$"
+      description: Microseconds since the epoch, as a decimal string.
+    ErrorMessage:
+      type: string
+      description: "`Error=` followed by a message that can be shown to the user."
+
+    AuthorizationCodeGrant:
+      type: object
+      required: [grant_type, code, redirect_uri, client_id, client_secret]
+      properties:
+        grant_type: { type: string, const: authorization_code }
+        code: { type: string }
+        redirect_uri: { type: string, format: uri }
+        client_id: { type: string }
+        client_secret: { type: string }
+        scope: { type: string }
+    RefreshTokenGrant:
+      type: object
+      required: [grant_type, refresh_token, client_id, client_secret]
+      properties:
+        grant_type: { type: string, const: refresh_token }
+        refresh_token: { type: string }
+        client_id: { type: string }
+        client_secret: { type: string }
+    Token:
+      type: object
+      required: [access_token, token_type, expires_in, refresh_token, scope]
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, const: Bearer }
+        expires_in: { type: integer, description: Seconds until the access token expires. }
+        refresh_token: { type: string }
+        scope: { type: string }
+
+    UserInfo:
+      type: object
+      required: [userId, userName, userProfileId]
+      properties:
+        userId: { type: string }
+        userName: { type: string }
+        userProfileId: { type: string }
+        userEmail: { type: string }
+        isBloggerUser: { type: boolean }
+        signupTimeSec: { type: integer }
+        isMultiLoginEnabled: { type: boolean }
+
+    QuickAddResult:
+      type: object
+      required: [query, numResults]
+      properties:
+        query: { type: string }
+        numResults: { type: integer, enum: [0, 1] }
+        streamId: { $ref: "#/components/schemas/StreamId" }
+        streamName: { type: string }
+
+    Category:
+      type: object
+      required: [id, label]
+      properties:
+        id: { $ref: "#/components/schemas/StreamId" }
+        label: { type: string }
+    Subscription:
+      type: object
+      required: [id, title, categories, sortid, firstitemmsec, url, htmlUrl, iconUrl]
+      properties:
+        id: { $ref: "#/components/schemas/StreamId" }
+        title: { type: string }
+        description: { type: string }
+        categories:
+          type: array
+          items: { $ref: "#/components/schemas/Category" }
+        sortid:
+          type: string
+          description: Empty for team channels.
+          pattern: "^([0-9A-Fa-f]{8})?$"
+        firstitemmsec:
+          type: integer
+          description: >-
+            Microseconds despite the name. Articles older than this cannot be
+            marked as unread.
+        url: { type: string, description: URL of the feed itself. }
+        htmlUrl: { type: string }
+        iconUrl: { type: string }
+        feedType:
+          type: string
+          description: Documented values are listed; others may appear.
+          examples: [rss, webfeed, facebook, bluesky, team_channel]
+
+    UnreadCounts:
+      type: object
+      required: [max, unreadcounts]
+      properties:
+        max: { type: integer }
+        unreadcounts:
+          type: array
+          items:
+            type: object
+            required: [id, count, newestItemTimestampUsec]
+            properties:
+              id: { $ref: "#/components/schemas/StreamId" }
+              count: { type: integer }
+              newestItemTimestampUsec: { $ref: "#/components/schemas/TimestampUsec" }
+
+    Tag:
+      type: object
+      required: [id, sortid]
+      properties:
+        id: { $ref: "#/components/schemas/StreamId" }
+        sortid: { $ref: "#/components/schemas/SortId" }
+        type:
+          type: string
+          enum: [tag, folder, active_search]
+        unread_count: { type: integer }
+        unseen_count: { type: integer }
+        organization_id:
+          type: string
+          description: Present when the folder or tag is a team asset.
+
+    Link:
+      type: object
+      required: [href]
+      properties:
+        href: { type: string }
+        type: { type: string }
+    Annotation:
+      type: object
+      properties:
+        id: { type: integer }
+        start: { type: integer }
+        end: { type: integer }
+        added_on: { type: integer }
+        text: { type: string }
+        note: { type: string }
+        user_id: { type: integer }
+        user_name: { type: string }
+        user_profile_picture: { type: string }
+    Summary:
+      type: object
+      properties:
+        id: { type: integer }
+        custom_prompt: { type: string }
+        prompt_id: { type: integer }
+        prompt_name: { type: string }
+        prompt_icon: { type: string }
+        summary: { type: string, description: HTML. }
+        is_mobilized: { type: integer }
+    Item:
+      type: object
+      required: [id, timestampUsec, crawlTimeMsec, categories, title, origin]
+      properties:
+        id:
+          type: string
+          description: Long form ID.
+          pattern: "^tag:google\\.com,2005:reader/item/[0-9a-f]{16}$"
+        crawlTimeMsec: { type: string, pattern: "^[0-9]+$" }
+        timestampUsec: { $ref: "#/components/schemas/TimestampUsec" }
+        categories:
+          type: array
+          items: { $ref: "#/components/schemas/StreamId" }
+        title: { type: string }
+        published: { type: integer, description: Seconds; for display only. }
+        updated: { type: integer, description: Seconds. }
+        canonical:
+          type: array
+          items: { $ref: "#/components/schemas/Link" }
+        alternate:
+          type: array
+          items: { $ref: "#/components/schemas/Link" }
+        summary:
+          type: object
+          properties:
+            direction: { type: string, enum: [ltr, rtl] }
+            content: { type: string, description: HTML. }
+        author: { type: string }
+        likingUsers: { type: array, items: {} }
+        comments: { type: array, items: {} }
+        commentsNum: { type: integer }
+        annotations:
+          type: array
+          items: { $ref: "#/components/schemas/Annotation" }
+        summaries:
+          type: array
+          items: { $ref: "#/components/schemas/Summary" }
+        origin:
+          type: object
+          required: [streamId]
+          properties:
+            streamId: { $ref: "#/components/schemas/StreamId" }
+            title: { type: string }
+            htmlUrl: { type: string }
+    StreamContents:
+      type: object
+      required: [id, items]
+      properties:
+        direction: { type: string, enum: [ltr, rtl] }
+        id: { $ref: "#/components/schemas/StreamId" }
+        title: { type: string }
+        description: { type: string }
+        self: { $ref: "#/components/schemas/Link" }
+        updated: { type: integer }
+        updatedUsec: { $ref: "#/components/schemas/TimestampUsec" }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Item" }
+        continuation:
+          type: string
+          description: Absent at the end of the stream.
+
+    ItemIds:
+      type: object
+      required: [itemRefs]
+      properties:
+        items: { type: array, items: {} }
+        itemRefs:
+          type: array
+          items:
+            type: object
+            required: [id, timestampUsec]
+            properties:
+              id:
+                type: string
+                description: Short form ID.
+                pattern: "^-?[0-9]+$"
+              directStreamIds:
+                type: array
+                items: { $ref: "#/components/schemas/StreamId" }
+              timestampUsec: { $ref: "#/components/schemas/TimestampUsec" }
+        continuation: { type: string }
+
+    StreamPreferences:
+      type: object
+      required: [streamprefs]
+      properties:
+        streamprefs:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              required: [id, value]
+              properties:
+                id: { type: string, examples: [subscription-ordering, is-expanded] }
+                value: { type: string }
+
+    ActiveSearchRequest:
+      type: object
+      required: [term, filter_type]
+      properties:
+        term: { type: string, description: Becomes the title of the active search. }
+        filter_type:
+          type: string
+          enum: [folder, subscription, public]
+        filter_id:
+          type: string
+          description: Long form ID of the folder or feed; required unless `filter_type` is `public`.
+        article_ids:
+          type: array
+          items: { type: integer }
+        search_filters:
+          type: string
+          enum: [all, titles, contents]
+          default: all
+        search_match:
+          type: string
+          enum: [all_words, any_word, full_phrase, advanced]
+          default: all_words
+        search_feed_popularity:
+          type: string
+          enum: [all_sites, popular_sites, most_popular_sites]
+          default: all_sites
+          description: Only in effect when `filter_type` is `public`.
+    ActiveSearchError:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+        accountLimit: { type: integer }
+        userOutput: { type: string, const: "1", description: "`error` is localized for the user." }
+        needUpgrade: { type: string, const: "1" }
