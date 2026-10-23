@@ -26,6 +26,11 @@ var (
 
 	// ErrServiceUnavailable reports that the service is unavailable.
 	ErrServiceUnavailable = errors.New("inoreader: service unavailable")
+
+	// ErrRedirect reports that a response redirected the request, which the
+	// client refuses so that the credentials are not sent elsewhere. It
+	// happens, for instance, with a base URL of http:// instead of https://.
+	ErrRedirect = errors.New("inoreader: redirect refused")
 )
 
 // APIError is an error response from the API. Match it against the Err

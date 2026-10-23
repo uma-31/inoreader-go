@@ -50,7 +50,8 @@ type Option func(*Client) error
 // an [golang.org/x/oauth2.Config] to authenticate the user with OAuth 2.0.
 //
 // The default client times out after 30 seconds; set a timeout on the given
-// client too.
+// client too. Redirects are refused whatever the given client allows; see
+// [ErrRedirect].
 func WithHTTPClient(httpClient *http.Client) Option {
 	return func(c *Client) error {
 		if httpClient == nil {
@@ -110,7 +111,19 @@ func NewClient(appID, appKey string, opts ...Option) (*Client, error) {
 			return nil, err
 		}
 	}
+
+	// Copy the client rather than change the caller's.
+	hc := *c.httpClient
+	hc.CheckRedirect = refuseRedirect
+	c.httpClient = &hc
 	return c, nil
+}
+
+// refuseRedirect stops redirects before they are followed. The API does not
+// redirect, and following one would send the app credentials, which are
+// custom headers, and an OAuth 2.0 token to wherever it points.
+func refuseRedirect(req *http.Request, _ []*http.Request) error {
+	return fmt.Errorf("%w to %s", ErrRedirect, req.URL.Redacted())
 }
 
 // RateLimit returns the rate limit reported by the latest response that

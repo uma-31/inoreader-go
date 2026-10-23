@@ -225,3 +225,33 @@ func TestQuotaRemainingNeverNegative(t *testing.T) {
 		t.Errorf("Remaining() = %d, want 0", got)
 	}
 }
+
+func TestRedirectRefused(t *testing.T) {
+	var leaked bool
+	elsewhere := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		leaked = true
+		_, _ = io.WriteString(w, `{}`)
+	}))
+	defer elsewhere.Close()
+
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, elsewhere.URL+r.URL.Path, http.StatusFound)
+	}))
+	defer api.Close()
+
+	callerClient := &http.Client{}
+	c, err := NewClient("id", "key", WithBaseURL(api.URL), WithHTTPClient(callerClient))
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	if _, err := c.UserInfo(t.Context()); !errors.Is(err, ErrRedirect) {
+		t.Errorf("error = %v, want ErrRedirect", err)
+	}
+	if leaked {
+		t.Error("the redirect was followed")
+	}
+	if callerClient.CheckRedirect != nil {
+		t.Error("the caller's HTTP client was changed")
+	}
+}
