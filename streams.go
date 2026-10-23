@@ -5,6 +5,7 @@ import (
 	"errors"
 	"iter"
 	"net/url"
+	"slices"
 	"strconv"
 	"time"
 )
@@ -180,12 +181,9 @@ type Item struct {
 // [StreamRead].
 func (it *Item) HasCategory(stream StreamID) bool {
 	stream = stream.Normalize()
-	for _, c := range it.Categories {
-		if c.Normalize() == stream {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(it.Categories, func(c StreamID) bool {
+		return c.Normalize() == stream
+	})
 }
 
 // URL returns the article's URL, or empty if it has none.
