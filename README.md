@@ -98,7 +98,7 @@ It keeps no state: marking an article as read does not change what the next requ
 
 Live tests, under [`live/`](live) behind the `live` build tag, run the client against the real Inoreader API to catch differences from the API description that the mock server cannot show. They only read data, so the account stays as it is, and make about ten requests, a tenth of the default daily limit.
 
-The [Live workflow](.github/workflows/live.yaml) runs them weekly and on demand from the Actions tab, never on pull requests. To set it up:
+The [Live workflow](.github/workflows/live.yaml) runs them weekly and on demand from the Actions tab, never on pull requests. Its logs are public, so failure messages leave out the account's data, and the access token and the user's identity are masked. To set it up:
 
 1. Register an app in the [Inoreader preferences](https://www.inoreader.com/preferences/other) (Developer panel). Read-only access is enough.
 2. Get a refresh token from the [Google OAuth 2.0 Playground](https://developers.google.com/oauthplayground), set up as the [Inoreader documentation](https://www.inoreader.com/developers/oauth) describes, with the `read` scope.

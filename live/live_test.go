@@ -11,6 +11,11 @@
 // once per run, or INOREADER_ACCESS_TOKEN, used as is. It only reads data,
 // so the account stays as it is, and makes about ten requests, a tenth of
 // the default daily limit.
+//
+// Its logs are public when the repository is, so failure messages name the
+// check that failed and never the user's data: no email, feed URLs, tags or
+// article content. On GitHub Actions it also masks the access token and the
+// user's identity, in case they reach the log anyway.
 package live_test
 
 import (
@@ -53,8 +58,23 @@ func TestMain(m *testing.M) {
 	default:
 		fail("set INOREADER_REFRESH_TOKEN or INOREADER_ACCESS_TOKEN to run the live tests")
 	}
+	mask(accessToken)
 
 	os.Exit(m.Run())
+}
+
+// mask hides values in the rest of the log when running on GitHub Actions,
+// which replaces them with ***. Secrets are masked already, but values that
+// are derived at run time are not.
+func mask(values ...string) {
+	if os.Getenv("GITHUB_ACTIONS") != "true" {
+		return
+	}
+	for _, v := range values {
+		if v != "" {
+			fmt.Printf("::add-mask::%s\n", v)
+		}
+	}
 }
 
 // refresh exchanges a refresh token for an access token. The App ID and App
@@ -96,8 +116,9 @@ func TestUserInfo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UserInfo: %v", err)
 	}
+	mask(u.ID, u.ProfileID, u.Name, u.Email)
 	if u.ID == "" || u.SignedUpAt.IsZero() {
-		t.Errorf("UserInfo() = %+v, want an ID and a sign-up time", u)
+		t.Errorf("UserInfo() lacks an ID (%t) or a sign-up time (%t)", u.ID == "", u.SignedUpAt.IsZero())
 	}
 
 	rl := c.RateLimit()
@@ -119,9 +140,9 @@ func TestFeedsAndFolders(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListSubscriptions: %v", err)
 	}
-	for _, s := range subs {
+	for i, s := range subs {
 		if _, ok := s.ID.FeedURL(); !ok && s.FeedType != "team_channel" {
-			t.Errorf("subscription %q has no feed URL", s.ID)
+			t.Errorf("subscription %d of %d, of type %q, has no feed URL", i+1, len(subs), s.FeedType)
 		}
 	}
 
@@ -185,10 +206,11 @@ func TestArticles(t *testing.T) {
 	}
 	for _, it := range contents.Items {
 		if it.Timestamp.IsZero() || it.Origin.StreamID == "" {
-			t.Errorf("item %s lacks a timestamp or an origin: %+v", it.ID.Long(), it)
+			t.Errorf("item %s lacks a timestamp (%t) or an origin (%t)",
+				it.ID.Long(), it.Timestamp.IsZero(), it.Origin.StreamID == "")
 		}
 		if !it.HasCategory(inoreader.StreamReadingList) {
-			t.Errorf("item %s is not in the reading list: %v", it.ID.Long(), it.Categories)
+			t.Errorf("item %s is not in the reading list, among its %d categories", it.ID.Long(), len(it.Categories))
 		}
 	}
 
