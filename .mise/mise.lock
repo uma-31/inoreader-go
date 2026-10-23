@@ -77,12 +77,3 @@ specifiers = [
     "2.64.0",
     "latest",
 ]
-
-[[tools."npm:@stoplight/prism-cli"]]
-version = "5.16.0"
-aube = { path = "locks/npm-stoplight-prism-cli/5.16.0", digest = "sha256:db0bc8a5001bbce54020dbf873e8c6023e8005db957f661c25ba30202f110e5b" }
-backend = "npm:@stoplight/prism-cli"
-specifiers = [
-    "5.16.0",
-    "latest",
-]

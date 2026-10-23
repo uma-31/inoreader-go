@@ -1,19 +1,17 @@
-//go:build e2e
-
-// Package e2e_test runs the client against the mock server that Prism
-// serves from api/openapi.yaml. Start it with `mise run test:e2e`, which
-// also starts the mock server, or point INOREADER_E2E_BASE_URL at a running
-// one.
+// Package e2e_test runs the client against a mock server that serves the
+// API from its description, api/openapi.yaml. Each test starts its own.
 //
-// Prism rejects requests that don't match the API description, so these
-// tests check the requests the client sends as well as how it decodes the
-// documented responses.
+// The mock server checks every request against the description and every
+// response example against its schema, and fails the test on a mismatch.
+// So these tests check the requests the client sends as well as how it
+// decodes the documented responses.
 package e2e_test
 
 import (
 	"context"
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
@@ -21,6 +19,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/uma-31/inoreader-go"
+	"github.com/uma-31/inoreader-go/e2e/mock"
 )
 
 const (
@@ -28,41 +27,49 @@ const (
 	appKey = "mock-app-key"
 )
 
-func baseURL() string {
-	if u := os.Getenv("INOREADER_E2E_BASE_URL"); u != "" {
-		return u
+var spec []byte
+
+func TestMain(m *testing.M) {
+	var err error
+	spec, err = os.ReadFile("../api/openapi.yaml")
+	if err != nil {
+		panic(err)
 	}
-	return "http://127.0.0.1:4010"
+	os.Exit(m.Run())
 }
 
-// checkingTransport fails the test when Prism reports that a request
-// violates the API description, and adds extra headers to each request.
-type checkingTransport struct {
-	t      *testing.T
+// startMock starts a mock server for the test and returns its URL. A request
+// or response that violates the API description fails the test.
+func startMock(t *testing.T) string {
+	t.Helper()
+
+	handler, err := mock.New(spec, func(v string) { t.Error(v) })
+	if err != nil {
+		t.Fatalf("mock.New: %v", err)
+	}
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+	return srv.URL
+}
+
+// headerTransport adds extra headers, such as Prefer, to each request.
+type headerTransport struct {
 	base   http.RoundTripper
 	header http.Header
 }
 
-func (ct *checkingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (ht *headerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = req.Clone(req.Context())
-	for k, vs := range ct.header {
+	for k, vs := range ht.header {
 		req.Header[k] = vs
 	}
-
-	resp, err := ct.base.RoundTrip(req)
-	if err != nil {
-		return nil, err
-	}
-	if v := resp.Header.Get("sl-violations"); v != "" {
-		ct.t.Errorf("%s %s violates the API description: %s", req.Method, req.URL.Path, v)
-	}
-	return resp, nil
+	return ht.base.RoundTrip(req)
 }
 
-func checkingHTTPClient(t *testing.T, header http.Header) *http.Client {
+func httpClient(header http.Header) *http.Client {
 	return &http.Client{
 		Timeout:   10 * time.Second,
-		Transport: &checkingTransport{t: t, base: http.DefaultTransport, header: header},
+		Transport: &headerTransport{base: http.DefaultTransport, header: header},
 	}
 }
 
@@ -71,12 +78,13 @@ func checkingHTTPClient(t *testing.T, header http.Header) *http.Client {
 // request.
 func newClient(t *testing.T, header http.Header) *inoreader.Client {
 	t.Helper()
+	base := startMock(t)
 
-	ctx := context.WithValue(t.Context(), oauth2.HTTPClient, checkingHTTPClient(t, nil))
+	ctx := context.WithValue(t.Context(), oauth2.HTTPClient, httpClient(nil))
 	conf := &oauth2.Config{
 		ClientID:     appID,
 		ClientSecret: appKey,
-		Endpoint:     inoreader.NewEndpoint(baseURL()),
+		Endpoint:     inoreader.NewEndpoint(base),
 		RedirectURL:  "https://example.com/callback",
 		Scopes:       []string{inoreader.ScopeRead, inoreader.ScopeWrite},
 	}
@@ -85,9 +93,9 @@ func newClient(t *testing.T, header http.Header) *inoreader.Client {
 		t.Fatalf("exchanging the authorization code: %v", err)
 	}
 
-	ctx = context.WithValue(t.Context(), oauth2.HTTPClient, checkingHTTPClient(t, header))
+	ctx = context.WithValue(t.Context(), oauth2.HTTPClient, httpClient(header))
 	c, err := inoreader.NewClient(appID, appKey,
-		inoreader.WithBaseURL(baseURL()),
+		inoreader.WithBaseURL(base),
 		inoreader.WithHTTPClient(conf.Client(ctx, token)),
 		inoreader.WithUserAgent("inoreader-go-e2e"),
 	)
@@ -98,11 +106,12 @@ func newClient(t *testing.T, header http.Header) *inoreader.Client {
 }
 
 func TestOAuth2(t *testing.T) {
-	ctx := context.WithValue(t.Context(), oauth2.HTTPClient, checkingHTTPClient(t, nil))
+	base := startMock(t)
+	ctx := context.WithValue(t.Context(), oauth2.HTTPClient, httpClient(nil))
 	conf := &oauth2.Config{
 		ClientID:     appID,
 		ClientSecret: appKey,
-		Endpoint:     inoreader.NewEndpoint(baseURL()),
+		Endpoint:     inoreader.NewEndpoint(base),
 		RedirectURL:  "https://example.com/callback",
 		Scopes:       []string{inoreader.ScopeRead},
 	}
@@ -127,9 +136,10 @@ func TestOAuth2(t *testing.T) {
 }
 
 func TestClientLogin(t *testing.T) {
+	base := startMock(t)
 	c, err := inoreader.NewClient(appID, appKey,
-		inoreader.WithBaseURL(baseURL()),
-		inoreader.WithHTTPClient(checkingHTTPClient(t, nil)),
+		inoreader.WithBaseURL(base),
+		inoreader.WithHTTPClient(httpClient(nil)),
 	)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
@@ -144,8 +154,8 @@ func TestClientLogin(t *testing.T) {
 	}
 
 	c, err = inoreader.NewClient(appID, appKey,
-		inoreader.WithBaseURL(baseURL()),
-		inoreader.WithHTTPClient(checkingHTTPClient(t, nil)),
+		inoreader.WithBaseURL(base),
+		inoreader.WithHTTPClient(httpClient(nil)),
 		inoreader.WithClientLoginToken(token),
 	)
 	if err != nil {
@@ -408,8 +418,9 @@ func TestRateLimitedReportsUsage(t *testing.T) {
 }
 
 func TestUnauthenticated(t *testing.T) {
+	base := startMock(t)
 	c, err := inoreader.NewClient(appID, appKey,
-		inoreader.WithBaseURL(baseURL()),
+		inoreader.WithBaseURL(base),
 		inoreader.WithHTTPClient(&http.Client{Timeout: 10 * time.Second}),
 	)
 	if err != nil {

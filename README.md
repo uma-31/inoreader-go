@@ -69,13 +69,13 @@ The `go` directive in `go.mod` is the oldest Go version dependents need; CI runs
 | Task | What it does |
 | :-- | :-- |
 | `mise run test:unit` | Run the unit tests |
-| `mise run test:e2e` | Start the mock server and run the E2E tests against it |
+| `mise run test:e2e` | Run the E2E tests against the mock server |
 | `mise run test:live` | Run the live tests against the real API, with the credentials in `.env` |
 | `mise run live:authorize` | Get a refresh token for the live tests into `.env` |
-| `mise run go:check` | Check formatting, lint and `go.mod` |
+| `mise run go:check` | Check formatting, lint and `go.mod` of both modules |
 | `mise run go:fix` | Format and apply lint fixes |
 | `mise run api:lint` | Lint the API description |
-| `mise run mock` | Start the mock server |
+| `mise run mock` | Start the mock server on its own |
 
 ### API description
 
@@ -85,12 +85,16 @@ The `go` directive in `go.mod` is the oldest Go version dependents need; CI runs
 
 Unit tests run the client against `httptest` servers and check the requests it builds and how it decodes responses.
 
-E2E tests, under [`e2e/`](e2e) behind the `e2e` build tag, run the client against a mock server that [Prism](https://stoplight.io/open-source/prism) serves from the API description. `mise run test:e2e` starts the mock server, runs the tests and stops it; arguments after `--` go to `go test`, as in `mise run test:e2e -- -run TestStreams -v`. To run the tests against a mock server that is already running, set `INOREADER_E2E_BASE_URL` to its address and run `go test -tags e2e ./e2e/...`.
+E2E tests, under [`e2e/`](e2e), run the client against a mock server that serves the API from its description. The mock server, in [`e2e/mock`](e2e/mock), needs no code per endpoint: it validates each request against the description with [libopenapi-validator](https://github.com/pb33f/libopenapi-validator), and answers with the examples of the documented response. Each test starts its own, so `mise run test:e2e`, or `go test ./...` in `e2e/`, is all it takes; arguments after `--` go to `go test`, as in `mise run test:e2e -- -run TestStreams -v`.
+
+`e2e/` is a Go module of its own, so that the dependencies of the mock server stay out of the client's `go.mod`.
 
 The mock server:
 
-- returns the examples in the description, with the rate limit headers
-- rejects requests without credentials (`401`) and requests that don't match the description (`400`, with the violations in the `sl-violations` header, which fails the E2E tests)
+- returns the examples in the description, with their headers such as the rate limit
+- answers requests without credentials with `401`
+- fails the test on a request that doesn't match the description, and answers it with `400`
+- fails the test on a response example that doesn't match its schema
 - returns any documented response on request, through the `Prefer` header, e.g. `Prefer: code=429` for a reached rate limit
 
 It keeps no state: marking an article as read does not change what the next request returns.
@@ -122,9 +126,9 @@ To run them locally, run `mise run test:live` with the same `.env`.
 
 ### Mock server
 
-To start the mock server on its own, for manual checks:
+To start the mock server on its own, for manual checks, which logs the violations instead:
 
 ```sh
-mise run mock                # http://127.0.0.1:4010
-mise run mock --port 8080
+mise run mock                         # http://127.0.0.1:4010
+mise run mock --addr 127.0.0.1:8080
 ```

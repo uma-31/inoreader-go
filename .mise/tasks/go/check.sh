@@ -2,17 +2,22 @@
 #MISE description="Verify formatting, lint and vet of the Go code without changing any file"
 set -euo pipefail
 
+# shellcheck source=./lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+
 function main() {
   cd "$(git rev-parse --show-toplevel)"
 
-  echo "running golangci-lint fmt --diff..."
-  golangci-lint fmt --diff
-
-  echo "running golangci-lint run..."
-  golangci-lint run
-
-  echo "verifying go.mod and go.sum are tidy..."
-  go mod tidy -diff
+  local module
+  while read -r module; do
+    echo "checking the module in $module..."
+    (
+      cd "$module"
+      golangci-lint fmt --diff
+      golangci-lint run
+      go mod tidy -diff
+    )
+  done < <(ls_modules)
 }
 
 main "$@"
