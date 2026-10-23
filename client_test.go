@@ -1,7 +1,6 @@
 package inoreader
 
 import (
-	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -105,7 +104,7 @@ func TestRequestHeaders(t *testing.T) {
 	c, reqs := newTestClient(t, http.StatusOK, `{"userId":"1"}`, nil)
 	c.authToken = "login-token"
 
-	if _, err := c.UserInfo(context.Background()); err != nil {
+	if _, err := c.UserInfo(t.Context()); err != nil {
 		t.Fatalf("UserInfo: %v", err)
 	}
 
@@ -134,7 +133,7 @@ func TestBaseURLWithPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
-	if _, err := c.UserInfo(context.Background()); err != nil {
+	if _, err := c.UserInfo(t.Context()); err != nil {
 		t.Fatalf("UserInfo: %v", err)
 	}
 	if want := "/proxy/reader/api/0/user-info"; gotPath != want {
@@ -159,7 +158,7 @@ func TestAPIError(t *testing.T) {
 		t.Run(http.StatusText(tt.status), func(t *testing.T) {
 			c, _ := newTestClient(t, tt.status, tt.body, rateLimitHeader())
 
-			_, err := c.UserInfo(context.Background())
+			_, err := c.UserInfo(t.Context())
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("error = %v, want %v", err, tt.want)
 			}
@@ -180,7 +179,7 @@ func TestAPIError(t *testing.T) {
 func TestUnexpectedPlainResponse(t *testing.T) {
 	c, _ := newTestClient(t, http.StatusOK, "Error=Something went wrong", nil)
 
-	err := c.DeleteTag(context.Background(), LabelStream("Tech"))
+	err := c.DeleteTag(t.Context(), LabelStream("Tech"))
 	var apiErr *APIError
 	if !errors.As(err, &apiErr) || apiErr.Message != "Something went wrong" {
 		t.Errorf("error = %v, want an *APIError with the message", err)
@@ -194,7 +193,7 @@ func TestRateLimit(t *testing.T) {
 	}
 
 	before := time.Now()
-	if _, err := c.UserInfo(context.Background()); err != nil {
+	if _, err := c.UserInfo(t.Context()); err != nil {
 		t.Fatalf("UserInfo: %v", err)
 	}
 

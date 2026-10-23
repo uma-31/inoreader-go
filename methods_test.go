@@ -1,15 +1,15 @@
 package inoreader
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"reflect"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func assertRequest(t *testing.T, got recorded, method, path string) {
@@ -24,8 +24,8 @@ func assertValues(t *testing.T, name string, got, want url.Values) {
 	if len(got) == 0 && len(want) == 0 {
 		return
 	}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("%s = %v, want %v", name, got, want)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("%s mismatch (-want +got):\n%s", name, diff)
 	}
 }
 
@@ -36,7 +36,7 @@ func TestUserInfo(t *testing.T) {
 		"signupTimeSec": 1163850013, "isMultiLoginEnabled": false
 	}`, nil)
 
-	u, err := c.UserInfo(context.Background())
+	u, err := c.UserInfo(t.Context())
 	if err != nil {
 		t.Fatalf("UserInfo: %v", err)
 	}
@@ -46,8 +46,8 @@ func TestUserInfo(t *testing.T) {
 		ID: "1005921515", Name: "Bender", ProfileID: "1005921515", Email: "bender@example.com",
 		IsBloggerUser: true, SignedUpAt: time.Unix(1163850013, 0),
 	}
-	if !reflect.DeepEqual(u, want) {
-		t.Errorf("UserInfo() = %+v, want %+v", u, want)
+	if diff := cmp.Diff(want, u); diff != "" {
+		t.Errorf("UserInfo() mismatch (-want +got):\n%s", diff)
 	}
 }
 
@@ -59,7 +59,7 @@ func TestListSubscriptions(t *testing.T) {
 		"url": "http://example.com/feed", "htmlUrl": "http://example.com/", "iconUrl": "", "feedType": "rss"
 	}]}`, nil)
 
-	subs, err := c.ListSubscriptions(context.Background(), &ListSubscriptionsOptions{TeamAssets: true})
+	subs, err := c.ListSubscriptions(t.Context(), &ListSubscriptionsOptions{TeamAssets: true})
 	if err != nil {
 		t.Fatalf("ListSubscriptions: %v", err)
 	}
@@ -73,8 +73,8 @@ func TestListSubscriptions(t *testing.T) {
 		SortID:     "00DA6134", FirstItemAt: time.UnixMicro(1424501776942006),
 		URL: "http://example.com/feed", HTMLURL: "http://example.com/", FeedType: "rss",
 	}}
-	if !reflect.DeepEqual(subs, want) {
-		t.Errorf("ListSubscriptions() = %+v, want %+v", subs, want)
+	if diff := cmp.Diff(want, subs); diff != "" {
+		t.Errorf("ListSubscriptions() mismatch (-want +got):\n%s", diff)
 	}
 }
 
@@ -82,7 +82,7 @@ func TestSubscribe(t *testing.T) {
 	c, reqs := newTestClient(t, http.StatusOK,
 		`{"query": "feed/http://example.com/feed", "numResults": 1, "streamId": "feed/http://example.com/feed", "streamName": "Example"}`, nil)
 
-	got, err := c.Subscribe(context.Background(), FeedStream("http://example.com/feed"))
+	got, err := c.Subscribe(t.Context(), FeedStream("http://example.com/feed"))
 	if err != nil {
 		t.Fatalf("Subscribe: %v", err)
 	}
@@ -92,14 +92,15 @@ func TestSubscribe(t *testing.T) {
 		t.Errorf("Content-Type = %q", ct)
 	}
 	assertValues(t, "form", req.form, url.Values{"quickadd": {"feed/http://example.com/feed"}})
-	if want := (&Subscribed{StreamID: "feed/http://example.com/feed", Title: "Example"}); !reflect.DeepEqual(got, want) {
-		t.Errorf("Subscribe() = %+v, want %+v", got, want)
+	want := &Subscribed{StreamID: "feed/http://example.com/feed", Title: "Example"}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("Subscribe() mismatch (-want +got):\n%s", diff)
 	}
 }
 
 func TestSubscribeNotAdded(t *testing.T) {
 	c, _ := newTestClient(t, http.StatusOK, `{"query": "feed/x", "numResults": 0}`, nil)
-	if _, err := c.Subscribe(context.Background(), "feed/x"); !errors.Is(err, ErrNotSubscribed) {
+	if _, err := c.Subscribe(t.Context(), "feed/x"); !errors.Is(err, ErrNotSubscribed) {
 		t.Errorf("error = %v, want ErrNotSubscribed", err)
 	}
 }
@@ -107,7 +108,7 @@ func TestSubscribeNotAdded(t *testing.T) {
 func TestEditSubscription(t *testing.T) {
 	c, reqs := newTestClient(t, http.StatusOK, "OK", nil)
 
-	err := c.EditSubscription(context.Background(), EditSubscriptionRequest{
+	err := c.EditSubscription(t.Context(), EditSubscriptionRequest{
 		Action: SubscriptionEdit, Feed: "feed/x", Title: "X", AddTo: LabelStream("A"), RemoveFrom: LabelStream("B"),
 	})
 	if err != nil {
@@ -122,7 +123,7 @@ func TestEditSubscription(t *testing.T) {
 
 func TestUnsubscribe(t *testing.T) {
 	c, reqs := newTestClient(t, http.StatusOK, "OK", nil)
-	if err := c.Unsubscribe(context.Background(), "feed/x"); err != nil {
+	if err := c.Unsubscribe(t.Context(), "feed/x"); err != nil {
 		t.Fatalf("Unsubscribe: %v", err)
 	}
 	assertValues(t, "form", onlyRequest(t, reqs).form, url.Values{"ac": {"unsubscribe"}, "s": {"feed/x"}})
@@ -133,7 +134,7 @@ func TestUnreadCounts(t *testing.T) {
 		{"id": "user/1/state/com.google/reading-list", "count": 4, "newestItemTimestampUsec": "1415620910006331"}
 	]}`, nil)
 
-	got, err := c.UnreadCounts(context.Background())
+	got, err := c.UnreadCounts(t.Context())
 	if err != nil {
 		t.Fatalf("UnreadCounts: %v", err)
 	}
@@ -142,8 +143,8 @@ func TestUnreadCounts(t *testing.T) {
 	want := &UnreadCounts{Max: 1000, Counts: []UnreadCount{
 		{ID: "user/1/state/com.google/reading-list", Count: 4, NewestItemAt: time.UnixMicro(1415620910006331)},
 	}}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("UnreadCounts() = %+v, want %+v", got, want)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("UnreadCounts() mismatch (-want +got):\n%s", diff)
 	}
 }
 
@@ -153,7 +154,7 @@ func TestListTags(t *testing.T) {
 		{"id": "user/1/label/Tech", "sortid": "BECC0BE1", "type": "folder", "unread_count": 3, "unseen_count": 1}
 	]}`, nil)
 
-	got, err := c.ListTags(context.Background(), &ListTagsOptions{Counts: true})
+	got, err := c.ListTags(t.Context(), &ListTagsOptions{Counts: true})
 	if err != nil {
 		t.Fatalf("ListTags: %v", err)
 	}
@@ -165,14 +166,14 @@ func TestListTags(t *testing.T) {
 		{ID: "user/1/state/com.google/starred", SortID: "FFFFFFFF"},
 		{ID: "user/1/label/Tech", SortID: "BECC0BE1", Type: TagTypeFolder, UnreadCount: 3, UnseenCount: 1},
 	}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("ListTags() = %+v, want %+v", got, want)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("ListTags() mismatch (-want +got):\n%s", diff)
 	}
 }
 
 func TestRenameAndDeleteTag(t *testing.T) {
 	c, reqs := newTestClient(t, http.StatusOK, "OK", nil)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	if err := c.RenameTag(ctx, LabelStream("Old"), "New"); err != nil {
 		t.Fatalf("RenameTag: %v", err)
@@ -188,7 +189,7 @@ func TestRenameAndDeleteTag(t *testing.T) {
 }
 
 func TestEditTagHelpers(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	tests := []struct {
 		name string
 		call func(*Client) error
@@ -229,7 +230,7 @@ func TestEditTagHelpers(t *testing.T) {
 
 func TestEditTagValidation(t *testing.T) {
 	c, reqs := newTestClient(t, http.StatusOK, "OK", nil)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	if err := c.MarkAsRead(ctx); err == nil {
 		t.Error("MarkAsRead without items succeeded")
@@ -267,7 +268,7 @@ func TestStreamContents(t *testing.T) {
 	c, reqs := newTestClient(t, http.StatusOK, streamContentsBody, nil)
 	since := time.UnixMicro(1600000000123456)
 
-	got, err := c.StreamContents(context.Background(), FeedStream("http://example.com/a b?c"), &StreamContentsOptions{
+	got, err := c.StreamContents(t.Context(), FeedStream("http://example.com/a b?c"), &StreamContentsOptions{
 		StreamOptions: StreamOptions{
 			Count: 50, OldestFirst: true, Since: since, Exclude: StreamRead, Include: StreamStarred,
 			Continuation: "prev", ExcludeFolderTags: true,
@@ -307,8 +308,8 @@ func TestStreamContents(t *testing.T) {
 		}},
 		Summaries: []Summary{{ID: 9, PromptID: 1, PromptName: "One sentence summary", HTML: "<p>Short</p>"}},
 	}
-	if !reflect.DeepEqual(got.Items[0], want) {
-		t.Errorf("item = %+v\nwant %+v", got.Items[0], want)
+	if diff := cmp.Diff(want, got.Items[0]); diff != "" {
+		t.Errorf("item mismatch (-want +got):\n%s", diff)
 	}
 	if !got.Items[0].HasCategory(StreamRead) || got.Items[0].HasCategory(StreamStarred) {
 		t.Error("HasCategory() is wrong")
@@ -323,7 +324,7 @@ func TestItemIDs(t *testing.T) {
 		{"id": "3614359203", "directStreamIds": ["user/1/label/MTB"], "timestampUsec": "1416313130505268"}
 	], "continuation": "next"}`, nil)
 
-	got, err := c.ItemIDs(context.Background(), StreamReadingList, &StreamOptions{Count: 1000})
+	got, err := c.ItemIDs(t.Context(), StreamReadingList, &StreamOptions{Count: 1000})
 	if err != nil {
 		t.Fatalf("ItemIDs: %v", err)
 	}
@@ -334,8 +335,8 @@ func TestItemIDs(t *testing.T) {
 	want := &ItemRefs{Continuation: "next", Refs: []ItemRef{{
 		ID: 3614359203, DirectStreamIDs: []StreamID{"user/1/label/MTB"}, Timestamp: time.UnixMicro(1416313130505268),
 	}}}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("ItemIDs() = %+v, want %+v", got, want)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("ItemIDs() mismatch (-want +got):\n%s", diff)
 	}
 }
 
@@ -378,24 +379,24 @@ func TestAllItems(t *testing.T) {
 	c, continuations := pagedServer(t)
 
 	var ids []ItemID
-	for it, err := range c.AllItems(context.Background(), LabelStream("Tech"), nil) {
+	for it, err := range c.AllItems(t.Context(), LabelStream("Tech"), nil) {
 		if err != nil {
 			t.Fatalf("AllItems: %v", err)
 		}
 		ids = append(ids, it.ID)
 	}
-	if !reflect.DeepEqual(ids, []ItemID{1, 2, 3}) {
-		t.Errorf("ids = %v", ids)
+	if diff := cmp.Diff([]ItemID{1, 2, 3}, ids); diff != "" {
+		t.Errorf("ids mismatch (-want +got):\n%s", diff)
 	}
-	if !reflect.DeepEqual(*continuations, []string{"", "c1", "c2"}) {
-		t.Errorf("continuations = %q", *continuations)
+	if diff := cmp.Diff([]string{"", "c1", "c2"}, *continuations); diff != "" {
+		t.Errorf("continuations mismatch (-want +got):\n%s", diff)
 	}
 }
 
 func TestAllItemRefsStopsEarly(t *testing.T) {
 	c, continuations := pagedServer(t)
 
-	for ref, err := range c.AllItemRefs(context.Background(), LabelStream("Tech"), nil) {
+	for ref, err := range c.AllItemRefs(t.Context(), LabelStream("Tech"), nil) {
 		if err != nil {
 			t.Fatalf("AllItemRefs: %v", err)
 		}
@@ -413,7 +414,7 @@ func TestAllItemsStuckContinuation(t *testing.T) {
 
 	var err error
 	n := 0
-	for _, err = range c.AllItems(context.Background(), LabelStream("Tech"), &StreamContentsOptions{
+	for _, err = range c.AllItems(t.Context(), LabelStream("Tech"), &StreamContentsOptions{
 		StreamOptions: StreamOptions{Continuation: "next"},
 	}) {
 		if err != nil {
@@ -429,7 +430,7 @@ func TestAllItemsStuckContinuation(t *testing.T) {
 func TestAllItemsError(t *testing.T) {
 	c, _ := newTestClient(t, http.StatusTooManyRequests, "Error=limit", nil)
 
-	for _, err := range c.AllItems(context.Background(), LabelStream("Tech"), nil) {
+	for _, err := range c.AllItems(t.Context(), LabelStream("Tech"), nil) {
 		if !errors.Is(err, ErrRateLimited) {
 			t.Errorf("err = %v, want ErrRateLimited", err)
 		}
@@ -439,14 +440,14 @@ func TestAllItemsError(t *testing.T) {
 func TestMarkAllAsRead(t *testing.T) {
 	c, reqs := newTestClient(t, http.StatusOK, "OK", nil)
 
-	if err := c.MarkAllAsRead(context.Background(), LabelStream("Tech"), time.UnixMicro(1618212570146918)); err != nil {
+	if err := c.MarkAllAsRead(t.Context(), LabelStream("Tech"), time.UnixMicro(1618212570146918)); err != nil {
 		t.Fatalf("MarkAllAsRead: %v", err)
 	}
 	req := onlyRequest(t, reqs)
 	assertRequest(t, req, http.MethodPost, "/reader/api/0/mark-all-as-read")
 	assertValues(t, "form", req.form, url.Values{"s": {"user/-/label/Tech"}, "ts": {"1618212570146918"}})
 
-	if err := c.MarkAllAsRead(context.Background(), LabelStream("Tech"), time.Time{}); err == nil {
+	if err := c.MarkAllAsRead(t.Context(), LabelStream("Tech"), time.Time{}); err == nil {
 		t.Error("MarkAllAsRead without seenAt succeeded")
 	}
 }
@@ -457,14 +458,15 @@ func TestStreamPreferences(t *testing.T) {
 		"user/1005921515/label/MIT": [{"id": "is-expanded", "value": "true"}]
 	}}`, nil)
 
-	prefs, err := c.StreamPreferences(context.Background())
+	prefs, err := c.StreamPreferences(t.Context())
 	if err != nil {
 		t.Fatalf("StreamPreferences: %v", err)
 	}
 	assertRequest(t, onlyRequest(t, reqs), http.MethodGet, "/reader/api/0/preference/stream/list")
 
-	if got := prefs.SubscriptionOrdering(StreamRoot); !reflect.DeepEqual(got, []string{"BEC24025", "BEBD5A25"}) {
-		t.Errorf("SubscriptionOrdering() = %v", got)
+	got := prefs.SubscriptionOrdering(StreamRoot)
+	if diff := cmp.Diff([]string{"BEC24025", "BEBD5A25"}, got); diff != "" {
+		t.Errorf("SubscriptionOrdering() mismatch (-want +got):\n%s", diff)
 	}
 	if v, ok := prefs.Get(LabelStream("MIT"), "is-expanded"); !ok || v != "true" {
 		t.Errorf("Get() = %q, %v", v, ok)
@@ -477,7 +479,7 @@ func TestStreamPreferences(t *testing.T) {
 func TestSetSubscriptionOrdering(t *testing.T) {
 	c, reqs := newTestClient(t, http.StatusOK, "OK", nil)
 
-	if err := c.SetSubscriptionOrdering(context.Background(), StreamRoot, []string{"BEC24025", "00da6134"}); err != nil {
+	if err := c.SetSubscriptionOrdering(t.Context(), StreamRoot, []string{"BEC24025", "00da6134"}); err != nil {
 		t.Fatalf("SetSubscriptionOrdering: %v", err)
 	}
 	req := onlyRequest(t, reqs)
@@ -486,7 +488,7 @@ func TestSetSubscriptionOrdering(t *testing.T) {
 		"s": {"user/-/state/com.google/root"}, "k": {"subscription-ordering"}, "v": {"BEC2402500da6134"},
 	})
 
-	if err := c.SetSubscriptionOrdering(context.Background(), StreamRoot, []string{"XYZ"}); err == nil {
+	if err := c.SetSubscriptionOrdering(t.Context(), StreamRoot, []string{"XYZ"}); err == nil {
 		t.Error("SetSubscriptionOrdering with an invalid sort ID succeeded")
 	}
 }
@@ -494,7 +496,7 @@ func TestSetSubscriptionOrdering(t *testing.T) {
 func TestCreateActiveSearch(t *testing.T) {
 	c, reqs := newTestClient(t, http.StatusOK, `{"id": "feed\\keyword-monitoring-AbCdEf", "title": "amazing"}`, nil)
 
-	got, err := c.CreateActiveSearch(context.Background(), ActiveSearchRequest{
+	got, err := c.CreateActiveSearch(t.Context(), ActiveSearchRequest{
 		Term: "amazing", FilterType: ActiveSearchInSubscription, FilterID: "feed/x",
 		ArticleIDs: []ItemID{12363668564}, SearchMatch: "any_word",
 	})
@@ -515,18 +517,19 @@ func TestCreateActiveSearch(t *testing.T) {
 		"term": "amazing", "filter_type": "subscription", "filter_id": "feed/x",
 		"article_ids": []any{12363668564.0}, "search_match": "any_word",
 	}
-	if !reflect.DeepEqual(body, wantBody) {
-		t.Errorf("request body = %v, want %v", body, wantBody)
+	if diff := cmp.Diff(wantBody, body); diff != "" {
+		t.Errorf("request body mismatch (-want +got):\n%s", diff)
 	}
-	if want := (&ActiveSearch{ID: `feed\keyword-monitoring-AbCdEf`, Title: "amazing"}); !reflect.DeepEqual(got, want) {
-		t.Errorf("CreateActiveSearch() = %+v, want %+v", got, want)
+	want := &ActiveSearch{ID: `feed\keyword-monitoring-AbCdEf`, Title: "amazing"}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("CreateActiveSearch() mismatch (-want +got):\n%s", diff)
 	}
 }
 
 func TestCreateActiveSearchRefused(t *testing.T) {
 	c, _ := newTestClient(t, http.StatusAccepted, `{"error": "Limit reached", "accountLimit": 30, "needUpgrade": "1"}`, nil)
 
-	_, err := c.CreateActiveSearch(context.Background(), ActiveSearchRequest{Term: "x", FilterType: ActiveSearchInPublic})
+	_, err := c.CreateActiveSearch(t.Context(), ActiveSearchRequest{Term: "x", FilterType: ActiveSearchInPublic})
 	var asErr *ActiveSearchError
 	if !errors.As(err, &asErr) {
 		t.Fatalf("error = %v, want an *ActiveSearchError", err)
@@ -538,7 +541,7 @@ func TestCreateActiveSearchRefused(t *testing.T) {
 
 func TestCreateActiveSearchValidation(t *testing.T) {
 	c, reqs := newTestClient(t, http.StatusOK, "{}", nil)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	if _, err := c.CreateActiveSearch(ctx, ActiveSearchRequest{FilterType: ActiveSearchInPublic}); err == nil {
 		t.Error("CreateActiveSearch without a term succeeded")
@@ -554,7 +557,7 @@ func TestCreateActiveSearchValidation(t *testing.T) {
 func TestDeleteActiveSearch(t *testing.T) {
 	c, reqs := newTestClient(t, http.StatusOK, "ok", nil)
 
-	if err := c.DeleteActiveSearch(context.Background(), "user/-/label/search"); err != nil {
+	if err := c.DeleteActiveSearch(t.Context(), "user/-/label/search"); err != nil {
 		t.Fatalf("DeleteActiveSearch: %v", err)
 	}
 	req := onlyRequest(t, reqs)
@@ -566,7 +569,7 @@ func TestClientLogin(t *testing.T) {
 	c, reqs := newTestClient(t, http.StatusOK, "SID=null\nLSID=null\nAuth=G2UlCaFx\n", nil)
 	c.authToken = "stale"
 
-	token, err := c.ClientLogin(context.Background(), "user@example.com", "secret")
+	token, err := c.ClientLogin(t.Context(), "user@example.com", "secret")
 	if err != nil {
 		t.Fatalf("ClientLogin: %v", err)
 	}
@@ -584,7 +587,7 @@ func TestClientLogin(t *testing.T) {
 
 func TestClientLoginWithoutToken(t *testing.T) {
 	c, _ := newTestClient(t, http.StatusOK, "SID=null\n", nil)
-	if _, err := c.ClientLogin(context.Background(), "u", "p"); err == nil {
+	if _, err := c.ClientLogin(t.Context(), "u", "p"); err == nil {
 		t.Error("ClientLogin succeeded without a token")
 	}
 }
