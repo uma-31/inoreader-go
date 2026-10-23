@@ -58,7 +58,9 @@ The API limits the requests of an app per day, and the default limit can be as l
 
 ## Development
 
-Tools and tasks are managed with [mise](https://mise.jdx.dev/). Run `mise install` once, then `mise tasks` to list the tasks.
+Install [Go](https://go.dev/dl/) 1.21 or later; the `toolchain` directive in `go.mod` makes it download and use the version this module is developed with. The other tools and the tasks are managed with [mise](https://mise.jdx.dev/): run `mise install` once, then `mise tasks` to list the tasks.
+
+The `go` directive in `go.mod` is the oldest Go version dependents need; CI runs the unit tests on it and on the latest release.
 
 | Task | What it does |
 | :-- | :-- |
