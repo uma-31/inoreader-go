@@ -4,6 +4,8 @@ pin = true
 minimum_release_age = "7d"
 
 [tools]
+go = "1.27.3"
+golangci-lint = "2.14.0"
 node = "24.22.0"
 "npm:@redocly/cli" = "2.64.0"
 "npm:@stoplight/prism-cli" = "5.16.0"
