@@ -3,11 +3,8 @@
 set -euo pipefail
 
 function main() {
-  local root
-  root="$(git rev-parse --show-toplevel)"
-
-  cd "$root"
-  redocly lint api/openapi.yaml
+  cd "$(git rev-parse --show-toplevel)"
+  vacuum lint --ruleset api/ruleset.yaml --fail-severity warn --details --no-banner api/openapi.yaml
 }
 
 main "$@"

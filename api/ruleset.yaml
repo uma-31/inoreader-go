@@ -1,0 +1,23 @@
+# vacuum ruleset for openapi.yaml. It describes Inoreader's API, written by
+# hand from its developer portal, so the rules on how an API should be
+# designed or documented do not apply: the API is what it is, and its
+# documentation lives on the portal.
+extends: [[vacuum:oas, recommended]]
+
+rules:
+  # Inoreader names properties in snake_case and puts verbs in paths.
+  camel-case-properties: off
+  paths-kebab-case: off
+  no-http-verbs-in-path: off
+
+  # Descriptions and examples are kept to what the client and the mock
+  # server need.
+  component-description: off
+  operation-description: off
+  oas3-parameter-description: off
+  oas3-missing-example: off
+  description-duplication: off
+
+  # The rate limit headers are shared through a YAML anchor, which this rule
+  # does not follow, so it reports them as unused.
+  oas3-unused-component: off

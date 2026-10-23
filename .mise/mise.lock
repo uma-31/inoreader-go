@@ -35,45 +35,35 @@ url = "https://github.com/golangci/golangci-lint/releases/download/v2.14.0/golan
 checksum = "sha256:b15f903d1649283a2ab6e8d2f0c317eaf1f9f6b3763950e7e8b7e72a43dd724f"
 url = "https://github.com/golangci/golangci-lint/releases/download/v2.14.0/golangci-lint-2.14.0-windows-amd64.zip"
 
-[[tools.node]]
-version = "24.22.0"
-backend = "core:node"
-specifiers = [
-    "24",
-    "24.22.0",
-]
+[[tools.vacuum]]
+version = "0.33.1"
+backend = "aqua:daveshanley/vacuum"
+specifiers = ["0.33.1"]
 
-[tools.node."platforms.linux-arm64"]
-checksum = "sha256:b7e7991d5407815adfa74a2a9cd4db683552c8ce32ff4a295c22e972849c3f5d"
-url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-linux-arm64.tar.gz"
+[tools.vacuum."platforms.linux-arm64"]
+checksum = "sha256:79ee040106d7e777c3a2dc2e48333f1e09ad9b57e4f9ced98f6b1c6cd9e01cd3"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.33.1/vacuum_0.33.1_linux_arm64.tar.gz"
 
-[tools.node."platforms.linux-arm64-musl"]
-url = "https://unofficial-builds.nodejs.org/download/release/v24.22.0/node-v24.22.0-linux-arm64-musl.tar.gz"
+[tools.vacuum."platforms.linux-arm64-musl"]
+checksum = "sha256:79ee040106d7e777c3a2dc2e48333f1e09ad9b57e4f9ced98f6b1c6cd9e01cd3"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.33.1/vacuum_0.33.1_linux_arm64.tar.gz"
 
-[tools.node."platforms.linux-x64"]
-checksum = "sha256:28ea0a438de9a13bd7891fd758eee6c7819ee8af5442dfd8d45bd65e56d4228c"
-url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-linux-x64.tar.gz"
+[tools.vacuum."platforms.linux-x64"]
+checksum = "sha256:3e4c7c96baa2716ee26a8aa34c92dd8ff5fee7e57d045c7e884b0f546cd918b6"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.33.1/vacuum_0.33.1_linux_x86_64.tar.gz"
 
-[tools.node."platforms.linux-x64-musl"]
-url = "https://unofficial-builds.nodejs.org/download/release/v24.22.0/node-v24.22.0-linux-x64-musl.tar.gz"
+[tools.vacuum."platforms.linux-x64-musl"]
+checksum = "sha256:3e4c7c96baa2716ee26a8aa34c92dd8ff5fee7e57d045c7e884b0f546cd918b6"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.33.1/vacuum_0.33.1_linux_x86_64.tar.gz"
 
-[tools.node."platforms.macos-arm64"]
-checksum = "sha256:6a9724d9b50a5f22b4816cded441b5a8d9ddae546191a5e5b7efa5a5e2ee26d5"
-url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-darwin-arm64.tar.gz"
+[tools.vacuum."platforms.macos-arm64"]
+checksum = "sha256:b349eea5d2078821398642db80942d42f3d9a2bbfe0b87dfcb6f6cfcffc71439"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.33.1/vacuum_0.33.1_darwin_arm64.tar.gz"
 
-[tools.node."platforms.macos-x64"]
-checksum = "sha256:495e3f273c645f3c4677d438304cdfc701729ea5dec5728f5c8e76a2dece4b91"
-url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-darwin-x64.tar.gz"
+[tools.vacuum."platforms.macos-x64"]
+checksum = "sha256:071ae2fd060d7985ecf85cacee70bd3ad6ed1f28da1c1f9d9174d8c7830089ce"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.33.1/vacuum_0.33.1_darwin_x86_64.tar.gz"
 
-[tools.node."platforms.windows-x64"]
-checksum = "sha256:f9683a19877e12a9b167305c8db71040d812876359de21f0d2e97c3f321f80c3"
-url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-win-x64.zip"
-
-[[tools."npm:@redocly/cli"]]
-version = "2.64.0"
-aube = { path = "locks/npm-redocly-cli/2.64.0", digest = "sha256:fd11daffccaa96905d9977a9096c3cdc85ae152b3562a6a10111419352c0ddc1" }
-backend = "npm:@redocly/cli"
-specifiers = [
-    "2.64.0",
-    "latest",
-]
+[tools.vacuum."platforms.windows-x64"]
+checksum = "sha256:f16a0e46a844d595767e22c668e580bc915d62ded44aeb126c87b11f441be558"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.33.1/vacuum_0.33.1_windows_x86_64.tar.gz"

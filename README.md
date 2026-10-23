@@ -62,7 +62,7 @@ The API limits the requests of an app per day, and the default limit can be as l
 
 ## Development
 
-Install [Go](https://go.dev/dl/) 1.21 or later; the `toolchain` directive in `go.mod` makes it download and use the version this module is developed with. The other tools and the tasks are managed with [mise](https://mise.jdx.dev/): run `mise install` once, then `mise tasks` to list the tasks.
+Everything is written in Go. Install [Go](https://go.dev/dl/) 1.21 or later; the `toolchain` directive in `go.mod` makes it download and use the version this module is developed with. The linters, [golangci-lint](https://golangci-lint.run/) and [vacuum](https://quobix.com/vacuum/), and the tasks are managed with [mise](https://mise.jdx.dev/): run `mise install` once, then `mise tasks` to list the tasks.
 
 The `go` directive in `go.mod` is the oldest Go version dependents need; CI runs the unit tests on it and on the latest release.
 
@@ -79,7 +79,7 @@ The `go` directive in `go.mod` is the oldest Go version dependents need; CI runs
 
 ### API description
 
-[`api/openapi.yaml`](api/openapi.yaml) describes the Inoreader API in OpenAPI 3.1. Inoreader publishes no machine-readable description, so it is written by hand from the developer portal. It is the contract the client is written against, and the source of the mock server.
+[`api/openapi.yaml`](api/openapi.yaml) describes the Inoreader API in OpenAPI 3.1. Inoreader publishes no machine-readable description, so it is written by hand from the developer portal. It is the contract the client is written against, and the source of the mock server. `mise run api:lint` checks it with the rules in [`api/ruleset.yaml`](api/ruleset.yaml).
 
 ### Tests
 

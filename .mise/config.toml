@@ -9,5 +9,4 @@ _.file = { path = ".env", redact = true }
 
 [tools]
 golangci-lint = "2.14.0"
-node = "24.22.0"
-"npm:@redocly/cli" = "2.64.0"
+vacuum = "0.33.1"
