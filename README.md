@@ -70,6 +70,7 @@ The `go` directive in `go.mod` is the oldest Go version dependents need; CI runs
 | :-- | :-- |
 | `mise run test:unit` | Run the unit tests |
 | `mise run test:e2e` | Start the mock server and run the E2E tests against it |
+| `mise run test:live` | Run the live tests against the real API, with the credentials in `.env` |
 | `mise run go:check` | Check formatting, lint and `go.mod` |
 | `mise run go:fix` | Format and apply lint fixes |
 | `mise run api:lint` | Lint the API description |
@@ -92,6 +93,28 @@ The mock server:
 - returns any documented response on request, through the `Prefer` header, e.g. `Prefer: code=429` for a reached rate limit
 
 It keeps no state: marking an article as read does not change what the next request returns.
+
+### Live tests
+
+Live tests, under [`live/`](live) behind the `live` build tag, run the client against the real Inoreader API to catch differences from the API description that the mock server cannot show. They only read data, so the account stays as it is, and make about ten requests, a tenth of the default daily limit.
+
+The [Live workflow](.github/workflows/live.yaml) runs them weekly and on demand from the Actions tab, never on pull requests. To set it up:
+
+1. Register an app in the [Inoreader preferences](https://www.inoreader.com/preferences/other) (Developer panel). Read-only access is enough.
+2. Get a refresh token from the [Google OAuth 2.0 Playground](https://developers.google.com/oauthplayground), set up as the [Inoreader documentation](https://www.inoreader.com/developers/oauth) describes, with the `read` scope.
+3. In the repository settings, create the environment `inoreader-live` and add these secrets to it:
+
+   | Secret | Value |
+   | :-- | :-- |
+   | `INOREADER_APP_ID` | App ID |
+   | `INOREADER_APP_KEY` | App key |
+   | `INOREADER_REFRESH_TOKEN` | Refresh token |
+
+The tests exchange the refresh token for an access token on each run. Whether Inoreader rotates refresh tokens is not documented; if it does, the run logs that the token was rotated, and the secret needs a new one once the old one stops working.
+
+To run them locally, put the same variables in `.env` at the repository root, which git ignores and mise loads, and run `mise run test:live`. `INOREADER_ACCESS_TOKEN` can stand in for the refresh token for a quick check.
+
+### Mock server
 
 To start the mock server on its own, for manual checks:
 

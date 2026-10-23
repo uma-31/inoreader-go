@@ -3,6 +3,10 @@ lockfile = true
 pin = true
 minimum_release_age = "7d"
 
+# Credentials for the live tests; see README.md. .env is ignored by git.
+[env]
+_.file = { path = ".env", redact = true }
+
 [tools]
 golangci-lint = "2.14.0"
 node = "24.22.0"
