@@ -19,6 +19,10 @@ const DefaultBaseURL = "https://www.inoreader.com"
 
 const apiPath = "/reader/api/0"
 
+// defaultTimeout bounds each request of the default HTTP client, which
+// [http.DefaultClient] leaves unbounded.
+const defaultTimeout = 30 * time.Second
+
 // Client calls the Inoreader API on behalf of one user.
 //
 // The client authenticates the app with its App ID and App key. The user is
@@ -44,6 +48,9 @@ type Option func(*Client) error
 
 // WithHTTPClient sets the HTTP client used for requests. Pass the client of
 // an [golang.org/x/oauth2.Config] to authenticate the user with OAuth 2.0.
+//
+// The default client times out after 30 seconds; set a timeout on the given
+// client too.
 func WithHTTPClient(httpClient *http.Client) Option {
 	return func(c *Client) error {
 		if httpClient == nil {
@@ -94,7 +101,7 @@ func NewClient(appID, appKey string, opts ...Option) (*Client, error) {
 
 	c := &Client{
 		baseURL:    DefaultBaseURL,
-		httpClient: http.DefaultClient,
+		httpClient: &http.Client{Timeout: defaultTimeout},
 		appID:      appID,
 		appKey:     appKey,
 	}
