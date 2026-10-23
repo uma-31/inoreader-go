@@ -71,6 +71,7 @@ The `go` directive in `go.mod` is the oldest Go version dependents need; CI runs
 | `mise run test:unit` | Run the unit tests |
 | `mise run test:e2e` | Start the mock server and run the E2E tests against it |
 | `mise run test:live` | Run the live tests against the real API, with the credentials in `.env` |
+| `mise run live:authorize` | Get a refresh token for the live tests into `.env` |
 | `mise run go:check` | Check formatting, lint and `go.mod` |
 | `mise run go:fix` | Format and apply lint fixes |
 | `mise run api:lint` | Lint the API description |
@@ -100,19 +101,24 @@ Live tests, under [`live/`](live) behind the `live` build tag, run the client ag
 
 The [Live workflow](.github/workflows/live.yaml) runs them weekly and on demand from the Actions tab, never on pull requests. Its logs are public, so failure messages leave out the account's data, and the access token and the user's identity are masked. To set it up:
 
-1. Register an app in the [Inoreader preferences](https://www.inoreader.com/preferences/other) (Developer panel). Read-only access is enough.
-2. Get a refresh token from the [Google OAuth 2.0 Playground](https://developers.google.com/oauthplayground), set up as the [Inoreader documentation](https://www.inoreader.com/developers/oauth) describes, with the `read` scope.
-3. In the repository settings, create the environment `inoreader-live` and add these secrets to it:
+1. Register an app in the [Inoreader preferences](https://www.inoreader.com/preferences/other) (Developer API), with the redirect URI `http://localhost:8765/callback` and the OAuth scope Read only.
+2. Put its App ID and App key in `.env` at the repository root, which git ignores and mise loads:
 
-   | Secret | Value |
-   | :-- | :-- |
-   | `INOREADER_APP_ID` | App ID |
-   | `INOREADER_APP_KEY` | App key |
-   | `INOREADER_REFRESH_TOKEN` | Refresh token |
+   ```sh
+   INOREADER_APP_ID=...
+   INOREADER_APP_KEY=...
+   ```
+
+3. Run `mise run live:authorize`, open the URL it prints and authorize the app. It adds `INOREADER_REFRESH_TOKEN` to `.env` without printing it. The whole flow stays between your machine and Inoreader.
+4. In the repository settings, create the environment `inoreader-live`, and upload the three variables as its secrets with the [GitHub CLI](https://cli.github.com/):
+
+   ```sh
+   gh secret set -f .env --env inoreader-live
+   ```
 
 The tests exchange the refresh token for an access token on each run. Whether Inoreader rotates refresh tokens is not documented; if it does, the run logs that the token was rotated, and the secret needs a new one once the old one stops working.
 
-To run them locally, put the same variables in `.env` at the repository root, which git ignores and mise loads, and run `mise run test:live`. `INOREADER_ACCESS_TOKEN` can stand in for the refresh token for a quick check.
+To run them locally, run `mise run test:live` with the same `.env`.
 
 ### Mock server
 
