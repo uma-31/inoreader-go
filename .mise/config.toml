@@ -1,3 +1,7 @@
+# Keep the secrets in .env out of task output. The App ID is not one, and
+# live:authorize must print it in the authorization URL.
+redactions = ["INOREADER_APP_KEY", "INOREADER_REFRESH_TOKEN", "INOREADER_ACCESS_TOKEN"]
+
 [settings]
 lockfile = true
 pin = true
@@ -5,7 +9,7 @@ minimum_release_age = "7d"
 
 # Credentials for the live tests; see README.md. .env is ignored by git.
 [env]
-_.file = { path = ".env", redact = true }
+_.file = ".env"
 
 [tools]
 golangci-lint = "2.14.0"
