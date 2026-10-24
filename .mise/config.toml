@@ -12,5 +12,5 @@ minimum_release_age = "7d"
 _.file = ".env"
 
 [tools]
-golangci-lint = "2.14.0"
+golangci-lint = "2.15.0"
 vacuum = "0.33.1"
