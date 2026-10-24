@@ -20,7 +20,10 @@ jobs:
   analysis:
     name: Scorecard analysis
     runs-on: ubuntu-latest
+    # Job permissions replace the workflow's, so the reads are listed again.
     permissions:
+      contents: read
+      actions: read
       # To upload the results to code scanning.
       security-events: write
       # To publish the results.
