@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+      # Blocks known-malicious Go modules before the job downloads them.
+      - uses: flatt-security/setup-takumi-guard-golang@02545d3425218766aac4dca114dcc3f6eaa0df4a # v1.3.0
       - name: Run the live tests
         env:
           INOREADER_APP_ID: ${{ secrets.INOREADER_APP_ID }}
