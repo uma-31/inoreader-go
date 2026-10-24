@@ -149,3 +149,7 @@ A published version cannot be changed or deleted, as the Go module proxy keeps i
 ### Dependencies
 
 [Renovate](https://docs.renovatebot.com/) keeps the Go modules, the GitHub Actions and the mise tools up to date, a week after each release. The `go` directive is left alone, as it is the oldest Go version dependents need.
+
+### Security
+
+See [SECURITY.md](SECURITY.md) to report a vulnerability.
