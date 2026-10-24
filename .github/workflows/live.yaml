@@ -19,9 +19,6 @@ jobs:
   live:
     name: Live tests
     runs-on: ubuntu-latest
-    # The secrets live in this environment, so only jobs that name it can
-    # read them.
-    environment: inoreader-live
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

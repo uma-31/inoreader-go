@@ -114,10 +114,10 @@ The [Live workflow](.github/workflows/live.yaml) runs them weekly and on demand 
    ```
 
 3. Run `mise run live:authorize`, open the URL it prints and authorize the app. It adds `INOREADER_REFRESH_TOKEN` to `.env` without printing it. The whole flow stays between your machine and Inoreader.
-4. In the repository settings, create the environment `inoreader-live`, and upload the three variables as its secrets with the [GitHub CLI](https://cli.github.com/):
+4. Upload the three variables as repository secrets for Actions with the [GitHub CLI](https://cli.github.com/):
 
    ```sh
-   gh secret set -f .env --env inoreader-live
+   gh secret set -f .env
    ```
 
 The tests exchange the refresh token for an access token on each run. Whether Inoreader rotates refresh tokens is not documented; if it does, the run logs that the token was rotated, and the secret needs a new one once the old one stops working.
