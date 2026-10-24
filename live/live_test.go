@@ -22,7 +22,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -246,15 +245,12 @@ func TestErrors(t *testing.T) {
 	})
 
 	t.Run("invalid app key", func(t *testing.T) {
+		// The developer portal documents 403 for wrong app credentials, but
+		// with an OAuth 2.0 token the API does not check the app key. This
+		// pins that observation, so a change in it shows up here.
 		c := newClient(t, "invalid-app-key", accessToken)
-		_, err := c.UserInfo(t.Context())
-		var apiErr *inoreader.APIError
-		if !errors.As(err, &apiErr) {
-			t.Fatalf("error = %v, want an *APIError", err)
-		}
-		// The developer portal documents 403 for wrong app credentials.
-		if apiErr.StatusCode != http.StatusForbidden {
-			t.Errorf("status = %d, want %d (message %q)", apiErr.StatusCode, http.StatusForbidden, apiErr.Message)
+		if _, err := c.UserInfo(t.Context()); err != nil {
+			t.Errorf("error = %v, want none: the API now checks the app key with OAuth 2.0", err)
 		}
 	})
 }
