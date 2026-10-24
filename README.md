@@ -145,3 +145,7 @@ git push origin v0.1.0
 ```
 
 A published version cannot be changed or deleted, as the Go module proxy keeps it forever. To withdraw a bad one, release a new version whose `go.mod` retracts it.
+
+### Dependencies
+
+[Renovate](https://docs.renovatebot.com/) keeps the Go modules, the GitHub Actions and the mise tools up to date, a week after each release. The `go` directive is left alone, as it is the oldest Go version dependents need.

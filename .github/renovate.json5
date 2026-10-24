@@ -1,0 +1,36 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
+    // Keep actions pinned to commit SHAs, with their version in a comment.
+    'helpers:pinGitHubActionDigestsToSemver',
+  ],
+  // Wait a week after a release, like the minimum_release_age of mise.
+  minimumReleaseAge: '7 days',
+  internalChecksFilter: 'strict',
+  postUpdateOptions: ['gomodTidy'],
+  packageRules: [
+    {
+      // The go directive is the oldest Go that dependents need, so it is
+      // raised on purpose only. The toolchain directive still updates.
+      matchManagers: ['gomod'],
+      matchDepTypes: ['golang'],
+      enabled: false,
+    },
+    {
+      // Patch updates that pass CI need no review.
+      matchUpdateTypes: ['patch', 'digest', 'pinDigest'],
+      automerge: true,
+    },
+  ],
+  customManagers: [
+    {
+      // Tools the workflows run with `go run module/cmd@version`.
+      customType: 'regex',
+      managerFilePatterns: ['/^\\.github/workflows/[^/]+\\.ya?ml$/'],
+      matchStrings: ['go run golang\\.org/x/vuln/cmd/govulncheck@(?<currentValue>v\\S+)'],
+      depNameTemplate: 'golang.org/x/vuln',
+      datasourceTemplate: 'go',
+    },
+  ],
+}
