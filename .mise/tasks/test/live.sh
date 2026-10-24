@@ -6,7 +6,8 @@ set -euo pipefail
 function main() {
   cd "$(git rev-parse --show-toplevel)"
   # -count=1 because a cached pass says nothing about the API today.
-  go test -tags live -count=1 -v "$@" ./live/...
+  # Only ./live: the tests of live/authorize need no API and run in test:unit.
+  go test -tags live -count=1 -v "$@" ./live
 }
 
 main "$@"
