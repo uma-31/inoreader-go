@@ -132,3 +132,16 @@ To start the mock server on its own, for manual checks, which logs the violation
 mise run mock                         # http://127.0.0.1:4010
 mise run mock --addr 127.0.0.1:8080
 ```
+
+### Releasing
+
+Releases follow [semantic versioning](https://go.dev/doc/modules/version-numbers) and stay at v0 until the API settles. The API compatibility job in CI runs [gorelease](https://pkg.go.dev/golang.org/x/exp/cmd/gorelease) on every pull request: it compares the exported API with the latest release and suggests the next version.
+
+To release, tag the commit on `main` with an annotated tag and push it, then write the release notes on GitHub:
+
+```sh
+git tag -a v0.1.0 -m v0.1.0
+git push origin v0.1.0
+```
+
+A published version cannot be changed or deleted, as the Go module proxy keeps it forever. To withdraw a bad one, release a new version whose `go.mod` retracts it.
