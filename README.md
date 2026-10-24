@@ -3,6 +3,7 @@
 [![CI](https://github.com/uma-31/inoreader-go/actions/workflows/ci.yaml/badge.svg)](https://github.com/uma-31/inoreader-go/actions/workflows/ci.yaml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/uma-31/inoreader-go.svg)](https://pkg.go.dev/github.com/uma-31/inoreader-go)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/uma-31/inoreader-go/badge)](https://scorecard.dev/viewer/?uri=github.com/uma-31/inoreader-go)
 
 A Go client library for the [Inoreader API](https://www.inoreader.com/developers/).
 
