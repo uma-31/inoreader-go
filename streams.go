@@ -35,7 +35,7 @@ func (c *Client) UnreadCounts(ctx context.Context) (*UnreadCounts, error) {
 		Max          int `json:"max"`
 		UnreadCounts []struct {
 			ID                      StreamID  `json:"id"`
-			Count                   int       `json:"count"`
+			Count                   flexInt   `json:"count"` // A string for some streams.
 			NewestItemTimestampUsec unixMicro `json:"newestItemTimestampUsec"`
 		} `json:"unreadcounts"`
 	}
@@ -47,7 +47,7 @@ func (c *Client) UnreadCounts(ctx context.Context) (*UnreadCounts, error) {
 	for i, uc := range wire.UnreadCounts {
 		counts.Counts[i] = UnreadCount{
 			ID:           uc.ID,
-			Count:        uc.Count,
+			Count:        int(uc.Count),
 			NewestItemAt: time.Time(uc.NewestItemTimestampUsec),
 		}
 	}

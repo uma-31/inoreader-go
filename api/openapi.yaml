@@ -327,7 +327,7 @@ paths:
                     count: 4
                     newestItemTimestampUsec: "1415620910006331"
                   - id: user/1005921515/label/Tech
-                    count: 4
+                    count: "4"
                     newestItemTimestampUsec: "1415620910006331"
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -1015,7 +1015,14 @@ components:
             required: [id, count, newestItemTimestampUsec]
             properties:
               id: { $ref: "#/components/schemas/StreamId" }
-              count: { type: integer }
+              count:
+                description: >-
+                  An integer, written as a decimal string for some streams.
+                  The documentation shows numbers only.
+                oneOf:
+                  - type: integer
+                  - type: string
+                    pattern: "^[0-9]+$"
               newestItemTimestampUsec: { $ref: "#/components/schemas/TimestampUsec" }
 
     Tag:

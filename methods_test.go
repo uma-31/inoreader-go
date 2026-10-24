@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -130,8 +131,10 @@ func TestUnsubscribe(t *testing.T) {
 }
 
 func TestUnreadCounts(t *testing.T) {
+	// The API writes some counts as strings.
 	c, reqs := newTestClient(t, http.StatusOK, `{"max": 1000, "unreadcounts": [
-		{"id": "user/1/state/com.google/reading-list", "count": 4, "newestItemTimestampUsec": "1415620910006331"}
+		{"id": "user/1/state/com.google/reading-list", "count": 4, "newestItemTimestampUsec": "1415620910006331"},
+		{"id": "user/1/label/Tech", "count": "3", "newestItemTimestampUsec": "1415620910006331"}
 	]}`, nil)
 
 	got, err := c.UnreadCounts(t.Context())
@@ -142,6 +145,7 @@ func TestUnreadCounts(t *testing.T) {
 
 	want := &UnreadCounts{Max: 1000, Counts: []UnreadCount{
 		{ID: "user/1/state/com.google/reading-list", Count: 4, NewestItemAt: time.UnixMicro(1415620910006331)},
+		{ID: "user/1/label/Tech", Count: 3, NewestItemAt: time.UnixMicro(1415620910006331)},
 	}}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("UnreadCounts() mismatch (-want +got):\n%s", diff)
@@ -599,5 +603,16 @@ func TestEndpoint(t *testing.T) {
 	}
 	if Endpoint.TokenURL != "https://www.inoreader.com/oauth2/token" {
 		t.Errorf("Endpoint.TokenURL = %q", Endpoint.TokenURL)
+	}
+}
+
+func TestUnreadCountsInvalidCount(t *testing.T) {
+	c, _ := newTestClient(t, http.StatusOK, `{"max": 1000, "unreadcounts": [
+		{"id": "user/1/label/Tech", "count": "many", "newestItemTimestampUsec": "1"}
+	]}`, nil)
+
+	_, err := c.UnreadCounts(t.Context())
+	if err == nil || !strings.Contains(err.Error(), `"many"`) {
+		t.Errorf("error = %v, want one naming the value", err)
 	}
 }
