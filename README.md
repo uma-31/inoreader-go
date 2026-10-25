@@ -11,6 +11,8 @@ A Go client library for the [Inoreader API](https://www.inoreader.com/developers
 go get github.com/uma-31/inoreader-go
 ```
 
+It needs Go 1.26 or later.
+
 ## Usage
 
 Register an app in the [Inoreader preferences](https://www.inoreader.com/preferences/other) to get its App ID and App key. API access needs an Inoreader Pro plan, except for public apps on platforms Inoreader is not available on.
@@ -63,9 +65,9 @@ The API limits the requests of an app per day, and the default limit can be as l
 
 ## Development
 
-Everything is written in Go. Install [Go](https://go.dev/dl/) 1.21 or later; the `toolchain` directive in `go.mod` makes it download and use the version this module is developed with. The linters, [golangci-lint](https://golangci-lint.run/) and [vacuum](https://quobix.com/vacuum/), and the tasks are managed with [mise](https://mise.jdx.dev/): run `mise install` once, then `mise tasks` to list the tasks.
+Everything is written in Go. Any [Go](https://go.dev/dl/) from 1.21 on will do, since the `toolchain` directive in `go.mod` makes it download and use the version this module is developed with; Go 1.21 is the first release that does so. The linters, [golangci-lint](https://golangci-lint.run/) and [vacuum](https://quobix.com/vacuum/), and the tasks are managed with [mise](https://mise.jdx.dev/): run `mise install` once, then `mise tasks` to list the tasks.
 
-The `go` directive in `go.mod` is the oldest Go version dependents need; CI runs the unit tests on it and on the latest release.
+The `go` directive in `go.mod` is the oldest Go version dependents need, which the Go 1.26 above refers to. CI runs the unit tests on it and on the latest release, without the toolchain download, which together cover the releases Go supports.
 
 | Task | What it does |
 | :-- | :-- |
