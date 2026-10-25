@@ -72,20 +72,10 @@ jobs:
           go-version-file: go.mod
       # Blocks known-malicious Go modules before the job downloads them.
       - uses: flatt-security/setup-takumi-guard-golang@02545d3425218766aac4dca114dcc3f6eaa0df4a # v1.3.0
-      # gorelease looks up the released versions of the module. While the
-      # repository is private, the module proxy cannot see it, so git reads
-      # it directly with the job's read-only token.
-      - name: Let git read the private repository
-        if: github.event.repository.private
-        env:
-          TOKEN: ${{ github.token }}
-        run: git config --global url."https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}".insteadOf "https://github.com/${GITHUB_REPOSITORY}"
       # Compares the exported API with the latest release and suggests the
       # next version; it fails on a change the version cannot carry, such
       # as a breaking change before v2.
       - run: go run golang.org/x/exp/cmd/gorelease@v0.0.0-20261014143641-f0251eb4aa3e
-        env:
-          GOPRIVATE: ${{ github.event.repository.private && format('github.com/{0}', github.repository) || '' }}
 
   e2e:
     name: E2E tests
