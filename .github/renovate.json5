@@ -18,6 +18,15 @@
       enabled: false,
     },
     {
+      // Renovate skips indirect requirements unless they have a security
+      // advisory it knows, which left the E2E module on a golang.org/x/net
+      // with known vulnerabilities. Keep them current like the direct ones.
+      matchManagers: ['gomod'],
+      matchDepTypes: ['indirect'],
+      matchFileNames: ['e2e/**'],
+      enabled: true,
+    },
+    {
       // Patch updates that pass CI need no review.
       matchUpdateTypes: ['patch', 'digest', 'pinDigest'],
       automerge: true,
