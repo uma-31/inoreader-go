@@ -22,7 +22,31 @@
       matchUpdateTypes: ['patch', 'digest', 'pinDigest'],
       automerge: true,
     },
+    {
+      // Neither do minor updates of what only the repository uses: the
+      // tools, the actions and the E2E module. The library's own
+      // dependencies pass on to its users, so they are reviewed.
+      matchManagers: ['github-actions', 'mise', 'custom.regex'],
+      matchUpdateTypes: ['minor'],
+      automerge: true,
+    },
+    {
+      matchFileNames: ['e2e/**'],
+      matchUpdateTypes: ['minor'],
+      automerge: true,
+    },
+    {
+      // The E2E module is not published, so its updates fix nothing for
+      // users.
+      matchFileNames: ['e2e/**'],
+      semanticCommitType: 'chore',
+    },
   ],
+  // Security updates skip minimumReleaseAge, which leaves review as the
+  // only check against a malicious release posing as a fix.
+  vulnerabilityAlerts: {
+    automerge: false,
+  },
   customManagers: [
     {
       // Tools the workflows run with `go run module/cmd@version`.
