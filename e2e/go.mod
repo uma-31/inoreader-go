@@ -22,7 +22,7 @@ require (
 	github.com/pb33f/jsonpath v0.8.4 // indirect
 	github.com/pb33f/jsonschema/v6 v6.0.3 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.2 // indirect
-	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 )
