@@ -1,0 +1,29 @@
+name: Release
+
+# Publishes a GitHub release with generated notes for each version tag. The
+# tag itself is the Go release; maintainers push it signed, and the tag
+# ruleset keeps anyone else from creating or moving one. Run it by hand to
+# publish the release of a tag pushed before this workflow existed.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to publish, such as v0.1.0
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Publish the release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - run: gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
