@@ -1,0 +1,11 @@
+# Groups the notes that GitHub generates for a release, as the Release
+# workflow does. Renovate labels its pull requests `dependencies`, so its
+# updates come last instead of drowning out the changes to the library.
+changelog:
+  categories:
+    - title: Changes
+      labels: ["*"]
+      exclude:
+        labels: [dependencies]
+    - title: Dependencies
+      labels: [dependencies]

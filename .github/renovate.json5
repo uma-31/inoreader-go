@@ -8,6 +8,8 @@
   // Wait a week after a release, like the minimum_release_age of mise.
   minimumReleaseAge: '7 days',
   internalChecksFilter: 'strict',
+  // .github/release.yml groups the release notes by this label.
+  labels: ['dependencies'],
   postUpdateOptions: ['gomodTidy'],
   packageRules: [
     {
