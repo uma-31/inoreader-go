@@ -51,7 +51,7 @@ jobs:
             e2e/go.sum
       # Blocks known-malicious Go modules before the job downloads them.
       - uses: flatt-security/setup-takumi-guard-golang@02545d3425218766aac4dca114dcc3f6eaa0df4a # v1.3.0
-      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
       - run: mise run go:check
       - run: mise run api:lint
       - name: Check for known vulnerabilities
