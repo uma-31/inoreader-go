@@ -13,4 +13,4 @@ _.file = ".env"
 
 [tools]
 golangci-lint = "2.15.0"
-vacuum = "0.35.1"
+vacuum = "0.35.4"
