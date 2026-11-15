@@ -4,7 +4,7 @@ module github.com/uma-31/inoreader-go/e2e
 
 go 1.26.0
 
-toolchain go1.27.3
+toolchain go1.27.4
 
 require (
 	github.com/pb33f/libopenapi v0.42.3
