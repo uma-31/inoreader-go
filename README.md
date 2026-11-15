@@ -106,7 +106,7 @@ It keeps no state: marking an article as read does not change what the next requ
 
 Live tests, under [`live/`](live) behind the `live` build tag, run the client against the real Inoreader API to catch differences from the API description that the mock server cannot show. They only read data, so the account stays as it is, and make about ten requests, a tenth of the default daily limit.
 
-The [Live workflow](.github/workflows/live.yaml) runs them weekly and on demand from the Actions tab, never on pull requests. Its logs are public, so failure messages leave out the account's data, and the access token and the user's identity are masked. To set it up:
+The [Live workflow](.github/workflows/live.yaml) runs them only on demand, from the Actions tab, never on pull requests. Its logs are public, so failure messages leave out the account's data, and the access token and the user's identity are masked. To set it up:
 
 1. Register an app in the [Inoreader preferences](https://www.inoreader.com/preferences/other) (Developer API), with the redirect URI `http://localhost:8765/callback` and the OAuth scope Read only.
 2. Put its App ID and App key in `.env` at the repository root, which git ignores and mise loads:

@@ -1,11 +1,9 @@
 name: Live
 
-# Runs the client against the real Inoreader API. It is never triggered by
-# pull requests, so the credentials are not exposed to code under review.
+# Runs the client against the real Inoreader API. It runs only on demand, and
+# it is never triggered by pull requests, so the credentials are not exposed to
+# code under review.
 on:
-  schedule:
-    # Weekly, on Monday at 03:17 UTC.
-    - cron: "17 3 * * 1"
   workflow_dispatch:
 
 permissions:
