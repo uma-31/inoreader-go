@@ -8,7 +8,7 @@ toolchain go1.27.4
 
 require (
 	github.com/pb33f/libopenapi v0.42.4
-	github.com/pb33f/libopenapi-validator v0.16.2
+	github.com/pb33f/libopenapi-validator v0.16.3
 	github.com/uma-31/inoreader-go v0.1.0
 	golang.org/x/oauth2 v0.38.0
 )
