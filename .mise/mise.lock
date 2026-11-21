@@ -50,48 +50,48 @@ url_api = "https://api.github.com/repos/golangci/golangci-lint/releases/assets/6
 provenance = "github-attestations"
 
 [[tools.vacuum]]
-version = "0.40.1"
+version = "0.41.0"
 backend = "aqua:daveshanley/vacuum"
-specifiers = ["0.40.1"]
+specifiers = ["0.41.0"]
 
 [tools.vacuum."platforms.linux-arm64"]
-checksum = "sha256:af443085bdf9baea3197804dd0b5671b83c37cc2fc7497e3356746159ee565fe"
-url = "https://github.com/daveshanley/vacuum/releases/download/v0.40.1/vacuum_0.40.1_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/741299846"
+checksum = "sha256:3ff590d05aa3ee42b9608f871ae14ae8bc1f90a594c06f3820079f498d9b0cac"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.41.0/vacuum_0.41.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/747563397"
 provenance = "cosign"
 
 [tools.vacuum."platforms.linux-arm64-musl"]
-checksum = "sha256:af443085bdf9baea3197804dd0b5671b83c37cc2fc7497e3356746159ee565fe"
-url = "https://github.com/daveshanley/vacuum/releases/download/v0.40.1/vacuum_0.40.1_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/741299846"
+checksum = "sha256:3ff590d05aa3ee42b9608f871ae14ae8bc1f90a594c06f3820079f498d9b0cac"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.41.0/vacuum_0.41.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/747563397"
 provenance = "cosign"
 
 [tools.vacuum."platforms.linux-x64"]
-checksum = "sha256:22d29c3184043eee53a6fc759fd4acc42095c030db9c4765199580bd85d20678"
-url = "https://github.com/daveshanley/vacuum/releases/download/v0.40.1/vacuum_0.40.1_linux_x86_64.tar.gz"
-url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/741300025"
+checksum = "sha256:17b9ca0f23c4f926bac3814393684acc81dc40e2f8fffd28812e4bf885d4269f"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.41.0/vacuum_0.41.0_linux_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/747563400"
 provenance = "cosign"
 
 [tools.vacuum."platforms.linux-x64-musl"]
-checksum = "sha256:22d29c3184043eee53a6fc759fd4acc42095c030db9c4765199580bd85d20678"
-url = "https://github.com/daveshanley/vacuum/releases/download/v0.40.1/vacuum_0.40.1_linux_x86_64.tar.gz"
-url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/741300025"
+checksum = "sha256:17b9ca0f23c4f926bac3814393684acc81dc40e2f8fffd28812e4bf885d4269f"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.41.0/vacuum_0.41.0_linux_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/747563400"
 provenance = "cosign"
 
 [tools.vacuum."platforms.macos-arm64"]
-checksum = "sha256:37f6464b47eff8aca0a9907068bbcff99dd21b0e2db2e97d9ca286fc1b97f116"
-url = "https://github.com/daveshanley/vacuum/releases/download/v0.40.1/vacuum_0.40.1_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/741299845"
+checksum = "sha256:9d8c3efb19e4a307743fd4b046b736441c61959e5b6de58d1ee3472b2791c8d3"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.41.0/vacuum_0.41.0_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/747563522"
 provenance = "cosign"
 
 [tools.vacuum."platforms.macos-x64"]
-checksum = "sha256:4f753456eee5826259f382be5dc86426c1840f671b357dd7210c9bb42c689895"
-url = "https://github.com/daveshanley/vacuum/releases/download/v0.40.1/vacuum_0.40.1_darwin_x86_64.tar.gz"
-url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/741299843"
+checksum = "sha256:fc40e65a8a532151e080a8a562d6903fc1a362d274ab496341fc532822dda27d"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.41.0/vacuum_0.41.0_darwin_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/747563528"
 provenance = "cosign"
 
 [tools.vacuum."platforms.windows-x64"]
-checksum = "sha256:4d0f9a120e7f9dd97fd7094f29f7e42bd6fca179bc22f5c3ad6e8c1ff98d4885"
-url = "https://github.com/daveshanley/vacuum/releases/download/v0.40.1/vacuum_0.40.1_windows_x86_64.tar.gz"
-url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/741299950"
+checksum = "sha256:32b2df18dab0f5481bc20271bae03421f54e78e0b57b0b772f3ff10278efe2b6"
+url = "https://github.com/daveshanley/vacuum/releases/download/v0.41.0/vacuum_0.41.0_windows_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/daveshanley/vacuum/releases/assets/747563396"
 provenance = "cosign"
